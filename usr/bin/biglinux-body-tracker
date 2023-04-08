@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd /usr/share/biglinux/body-tracker/
+python big_head_tracker.py $*
