@@ -5,6 +5,7 @@ pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('any')
 license=('GPL')
+depends=('python-mediapipe' 'python-pynput' 'python-playsound')
 url="https://github.com/biglinux/biglinux-body-tracker"
 pkgdesc="Use the webcam to control your computer"
 source=("git+https://github.com/biglinux/biglinux-body-tracker.git")
