@@ -405,7 +405,7 @@ with mp_face_mesh.FaceMesh(
                                 mouse.press(Button.right)
                                 tooltipWait = False
                                 rightClicked = True
-                                playsound('click.wav', block=False)
+                                # playsound('click.wav', block=False)
                         else:
                             confirmRightClick = 1
                             if rightClicked == False and leftClicked == False:
@@ -428,7 +428,7 @@ with mp_face_mesh.FaceMesh(
                                 mouse.press(Button.left)
                                 tooltipWait = False
                                 leftClicked = True
-                                playsound('click.wav', block=False)
+                                # playsound('click.wav', block=False)
                         else:
                             confirmLeftClick = 1
                             if leftClicked == False and rightClicked == False:

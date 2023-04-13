@@ -53,7 +53,7 @@ class VideoSource:
     def gain(self, gain):
         # self._capture = cv2.VideoCapture(0)
         self._capture.set(cv2.CAP_PROP_GAIN, gain)
-        self._capture.set(cv2.CAP_PROP_BRIGHTNESS, gain / 6)
+        self._capture.set(cv2.CAP_PROP_BRIGHTNESS, gain / 12)
         self._capture.set(cv2.CAP_PROP_CONTRAST, gain / 6)
         # self._capture.set(cv2.CAP_PROP_SATURATION, 20)
         # self._capture.set(cv2.CAP_PROP_SHARPNESS, 20)
@@ -81,9 +81,9 @@ class WebcamSource(VideoSource):
         self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
         self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)
+        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
-        self._capture.set(cv2.CAP_PROP_GAIN, 1)
+        self._capture.set(cv2.CAP_PROP_GAIN, 0)
         self._capture.set(cv2.CAP_PROP_EXPOSURE, (1 / (fps / 10000)))
         self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture.set(cv2.CAP_PROP_FPS, fps)
