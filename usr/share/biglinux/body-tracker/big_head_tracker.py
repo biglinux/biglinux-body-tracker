@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt  # to plot graphics
 from collections import deque  # to plot graphics
 from videosource import WebcamSource  # import file to use webcam image
 
+
 from pynput.mouse import Button, Controller  # To use mouse
 import tkinter as tk  # To show tooltip
 from playsound import playsound  # To play audio
@@ -59,9 +60,9 @@ parser.add_argument("--avatar", type=int, help="Show avatar image", default=0)
 parser.add_argument("--webcamid", type=int,
                     help="Number of webcam in /dev/video", default=0)
 parser.add_argument("--webcamx", type=int,
-                    help="Width of webcam image", default=640)
+                    help="Width of webcam image", default=1024)
 parser.add_argument("--webcamy", type=int,
-                    help="Height of webcam image", default=480)
+                    help="Height of webcam image", default=768)
 parser.add_argument("--fps", type=int,
                     help="Frames per second", default=15)
 parser.add_argument("--plot", type=str,
@@ -71,15 +72,19 @@ parser.add_argument("--blinkToClick", type=int,
 parser.add_argument("--leftEyeBlinkFunction", type=str,
                     help="Select left Eye Blink usage", default='leftClick')
 parser.add_argument("--minimalMouseMoveY", type=int,
-                    help="Movement needed to start move mouse", default=1)
+                    help="Movement needed to start move mouse", default=3)
 parser.add_argument("--minimalMouseMoveX", type=int,
-                    help="Movement needed to start move mouse", default=1)
+                    help="Movement needed to start move mouse", default=3)
+parser.add_argument("--slowMouseMoveY", type=int,
+                    help="Movement needed to start move mouse", default=6)
+parser.add_argument("--slowMouseMoveX", type=int,
+                    help="Movement needed to start move mouse", default=6)
 parser.add_argument("--mouseSpeedX", type=int,
-                    help="Horizontal speed of mouse moviment", default=20)
+                    help="Horizontal speed of mouse moviment", default=40)
 parser.add_argument("--mouseSpeedY", type=int,
-                    help="Vertical speed of mouse moviment", default=20)
+                    help="Vertical speed of mouse moviment", default=40)
 parser.add_argument("--autoBrightness", type=int,
-                    help="Automatic change webcam brightness, contrast and gamma", default=0)
+                    help="Automatic change webcam brightness, contrast and gamma", default=1)
 parser.add_argument("--mouthScroll", type=int,
                     help="Moving the mouth left or right moves the scroll", default=0)
 
@@ -100,6 +105,7 @@ mouse = Controller()  # Enable mouse controller
 ######################
 # Init variables
 ######################
+slowMove = 10
 rightEyeBlinkOld = 0
 leftEyeBlinkOld = 0
 mouthCenterLeftOld = 0
@@ -128,10 +134,8 @@ mouseLeftClickSensitivity = 0.8
 mouseRightClickSensitivity = 0.8
 disableClickInMovementValue = 5
 mouseFast = False
-leftEyeClicked = False
-rightEyeClicked = False
-confirmLeftClickValue = 4
-confirmRightClickValue = 4
+confirmLeftClickValue = 2
+confirmRightClickValue = 2
 leftEyeLine = []
 rightEyeLine = []
 line1 = []
@@ -259,8 +263,7 @@ with mp_face_mesh.FaceMesh(
             if frameNumber > 1:
                 landmarks = np.array([(lm.x, lm.y, lm.z)
                                       for lm in face_landmarks.landmark])
-                landmarks_mean = (landmarks +
-                                  (landmarks_mean * 1)) / 2
+                landmarks_mean = (landmarks + landmarks_mean) / 2
 
             if frameNumber < 2:
                 frameNumber += 1
@@ -297,16 +300,20 @@ with mp_face_mesh.FaceMesh(
                 mousePointY = mouseMoveY - zeroPointY
                 mousePointYabs = abs(mousePointY)
 
+                if slowMove > 9:
+                    slowMove = slowMove - 1
                 # Mouse acceleration
-                if mousePointXabs > args.minimalMouseMoveX or mousePointYabs > args.minimalMouseMoveY:
-
-                    mousePointXApply = mousePointX * \
-                        mousePointXabs / (args.minimalMouseMoveX)
-                    mousePointYApply = mousePointY * \
-                        mousePointYabs / (args.minimalMouseMoveY)
+                if (mousePointXabs > args.minimalMouseMoveX or mousePointYabs > args.minimalMouseMoveY) and slowMove < 10:
+                    if mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
+                        mousePointXApply = mousePointX * mousePointXabs / (args.slowMouseMoveX)
+                        mousePointYApply = mousePointY * mousePointYabs / (args.slowMouseMoveY)
+                        slowMove = 11
+                    else:
+                        mousePointXApply = mousePointX * mousePointXabs / (args.slowMouseMoveX)
+                        mousePointYApply = mousePointY * mousePointYabs / (args.slowMouseMoveY)
 
                     if scrollMouse == False:
-                        mouse.move(mousePointXApply, mousePointYApply)
+                        mouse.move(int(mousePointXApply), int(mousePointYApply))
 
                     # Change zeroPointX when mouse on limit screen
                     if mousePositionFrameX == mouse.position[0] and mousePointXabs > 1:
@@ -321,23 +328,45 @@ with mp_face_mesh.FaceMesh(
                     mousePositionFrameX = mouse.position[0]
                     mousePositionFrameY = mouse.position[1]
 
+
+
+
                 ############################
                 # Blink to mouse click start
                 ############################
                 if args.blinkToClick == True:
-                    leftEyeTopPoint1 = [landmarks_mean[158] +
-                                        landmarks_mean[159] + landmarks_mean[160]]
-                    leftEyeBottomPoint1 = [
-                        landmarks_mean[163] + landmarks_mean[145] + landmarks_mean[144]]
-                    leftEyeBlink = (np.linalg.norm(
-                        leftEyeBottomPoint1) - np.linalg.norm(leftEyeTopPoint1)) * 1000  # use distance between leftEyeBottomPoint1 to LeftEyeTopPoint1 for detect blink left eye
+                    #Normal
+                    # leftEyeTopPoint1 = [landmarks[158][0] + landmarks[159][0] + landmarks[160][0] + landmarks[158][1] + landmarks[159][1] + landmarks[160][1]]
+                    # leftEyeBottomPoint1 = [landmarks[163][0] + landmarks[145][0] + landmarks[144][0] + landmarks[163][1] + landmarks[145][1] + landmarks[144][1]]
+                    #Mean
+                    leftEyeTopPoint1 = [landmarks_mean[158][0] + landmarks_mean[159][0] + landmarks_mean[160][0] + landmarks_mean[158][1] + landmarks_mean[159][1] + landmarks_mean[160][1] + 2]
+                    leftEyeBottomPoint1 = [landmarks_mean[163][0] + landmarks_mean[145][0] + landmarks_mean[144][0] + landmarks_mean[163][1] + landmarks_mean[145][1] + landmarks_mean[144][1] + 2]
 
-                    rightEyeTopPoint1 = [landmarks[387] +
-                                         landmarks[385] + landmarks[386]]
-                    rightEyeBottomPoint1 = [
-                        landmarks[374] + landmarks[380] + landmarks[373]]
-                    rightEyeBlink = (np.linalg.norm(
-                        rightEyeBottomPoint1) - np.linalg.norm(rightEyeTopPoint1)) * 1000  # same of left eye but to right eye
+
+                    # print(landmarks_mean[158][0])
+                    # print(landmarks_mean[159][0])
+                    # print(landmarks_mean[160][0])
+                    # print(landmarks_mean[158][1])
+                    # print(landmarks_mean[159][1])
+                    # print(landmarks_mean[160][1])
+
+                    # print(landmarks_mean[387][0])
+                    # print(landmarks_mean[385][0])
+                    # print(landmarks_mean[386][0])
+                    # print(landmarks_mean[387][1])
+                    # print(landmarks_mean[385][1])
+                    # print(landmarks_mean[386][1])
+                    # print(np.linalg.norm(leftEyeTopPoint1width) - np.linalg.norm(leftEyeBottomPoint1heigth))
+
+                    leftEyeBlink = (np.linalg.norm(leftEyeBottomPoint1) - np.linalg.norm(leftEyeTopPoint1)) * 500  # use distance between leftEyeBottomPoint1 to LeftEyeTopPoint1 for detect blink left eye
+
+                    #Normal
+                    # rightEyeTopPoint1 = [landmarks[387][0] + landmarks[385][0] + landmarks[386][0] + landmarks[387][1] + landmarks[385][1] + landmarks[386][1]]
+                    # rightEyeBottomPoint1 = [landmarks[374][0] + landmarks[380][0] + landmarks[373][0] + landmarks[374][1] + landmarks[380][1] + landmarks[373][1]]
+                    #Mean
+                    rightEyeTopPoint1 = [landmarks_mean[387][0] + landmarks_mean[385][0] + landmarks_mean[386][0] + landmarks_mean[387][1] + landmarks_mean[385][1] + landmarks_mean[386][1] + 2]
+                    rightEyeBottomPoint1 = [landmarks_mean[374][0] + landmarks_mean[380][0] + landmarks_mean[373][0] + landmarks_mean[374][1] + landmarks_mean[380][1] + landmarks_mean[373][1] + 2]
+                    rightEyeBlink = (np.linalg.norm(rightEyeBottomPoint1) - np.linalg.norm(rightEyeTopPoint1)) * 500  # same of left eye but to right eye
 
                     # In stand by click stop to refresh normalized value
                     if standByClick == False:
@@ -345,13 +374,14 @@ with mp_face_mesh.FaceMesh(
                             [rightEyeBlink, rightEyeBlinkOld])
                         leftEyeNormalized = np.mean(
                             [leftEyeBlink, leftEyeBlinkOld])
-                    leftEyeBlinkOld = (
-                        (leftEyeBlinkOld * args.fps) + leftEyeBlink) / (args.fps + 1)
+
                     rightEyeBlinkOld = (
                         (rightEyeBlinkOld * args.fps) + rightEyeBlink) / (args.fps + 1)
+                    leftEyeBlinkOld = (
+                        (leftEyeBlinkOld * args.fps) + leftEyeBlink) / (args.fps + 1)
 
                     # Disable click if close two eyes
-                    if leftEyeBlink < leftEyeNormalized * 0.6 and rightEyeBlink < rightEyeNormalized * 0.6:
+                    if leftEyeBlink < leftEyeNormalized * 0.9 and rightEyeBlink < rightEyeNormalized * 0.9:
                         standByClick = True
                         confirmLeftClick = 1
                         confirmRightClick = 1
@@ -362,17 +392,20 @@ with mp_face_mesh.FaceMesh(
                         if tooltipWait == True:
                             tkTooltip.destroy()
                             tkTooltip = tk.Tk()
-                        if rightEyeBlink < rightEyeNormalized * 0.8 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False:
+
+                        if rightClicked == True:
+                            tkTooltipChange("R", "#00b21f", "#000000",
+                                            mouse.position[0] + 30, mouse.position[1] + 30)
+                            
+                        if rightEyeBlink < rightEyeBlinkOld * 0.5 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False:
                             confirmRightClick += 1
                             standByClick = True
 
-                            if confirmRightClick >= confirmRightClickValue and mousePointXabs < 1 and mousePointYabs < 1:
+                            if confirmRightClick >= confirmRightClickValue and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 mouse.press(Button.right)
-                                playsound('click.wav', block=False)
+                                tooltipWait = False
                                 rightClicked = True
-                                # tkTooltipChange("Right Click", "#00b21f", "#000000",
-                                #                 mouse.position[0] + 30, mouse.position[1] + 30)
-
+                                playsound('click.wav', block=False)
                         else:
                             confirmRightClick = 1
                             if rightClicked == False and leftClicked == False:
@@ -382,14 +415,19 @@ with mp_face_mesh.FaceMesh(
                                 mouse.release(Button.right)
                                 rightClicked = False
                                 standByClick = False
+                                tooltipWait = True
 
-                        if leftEyeBlink < leftEyeNormalized * 0.8 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False:
+                        if leftClicked == True:
+                            tkTooltipChange("L", "#00b21f", "#000000",
+                                            mouse.position[0] + 30, mouse.position[1] + 30)
+
+                        if leftEyeBlink < leftEyeBlinkOld * 0.5 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False:
                             confirmLeftClick += 1
                             standByClick = True
-                            if confirmLeftClick >= confirmLeftClickValue and mousePointXabs < 1 and mousePointYabs < 1:
+                            if confirmLeftClick >= confirmLeftClickValue and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 mouse.press(Button.left)
+                                tooltipWait = False
                                 leftClicked = True
-                                leftEyeClicked = True
                                 playsound('click.wav', block=False)
                         else:
                             confirmLeftClick = 1
@@ -400,6 +438,7 @@ with mp_face_mesh.FaceMesh(
                                 mouse.release(Button.left)
                                 leftClicked = False
                                 standByClick = False
+                                tooltipWait = True
 
                         if ((leftEyeBlink < leftEyeNormalized * 0.8) or (rightEyeBlink < rightEyeNormalized * 0.8)) and (mousePointXabs < 3 or mousePointYabs < 3) and leftClicked == False and rightClicked == False:
                             if zeroPointX > mousePointX:
