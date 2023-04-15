@@ -176,6 +176,10 @@ with mp_face_mesh.FaceMesh(
                     gain -= 10
                 fpsBrightness = 0
             source.gain(gain)
+            
+        frameTime = time.time()
+        fpsReal = int(1 / (frameTime - oldframeTime))
+        oldframeTime = frameTime
 
         ############################
         # Work in face mesh result
@@ -376,9 +380,9 @@ with mp_face_mesh.FaceMesh(
                             [leftEyeBlink, leftEyeBlinkOld])
 
                     rightEyeBlinkOld = (
-                        (rightEyeBlinkOld * args.fps) + rightEyeBlink) / (args.fps + 1)
+                        (rightEyeBlinkOld * fpsReal) + rightEyeBlink) / (fpsReal + 1)
                     leftEyeBlinkOld = (
-                        (leftEyeBlinkOld * args.fps) + leftEyeBlink) / (args.fps + 1)
+                        (leftEyeBlinkOld * fpsReal) + leftEyeBlink) / (fpsReal + 1)
 
                     # Disable click if close two eyes
                     if leftEyeBlink < leftEyeNormalized * 0.9 and rightEyeBlink < rightEyeNormalized * 0.9:
@@ -466,7 +470,7 @@ with mp_face_mesh.FaceMesh(
                                     mouthCenterLeftOld = mouthCenterLeft
                                 else:
                                     mouthCenterLeftOld = (
-                                        (mouthCenterLeftOld * args.fps) + mouthCenterLeft) / (args.fps + 1)
+                                        (mouthCenterLeftOld * fpsReal) + mouthCenterLeft) / (fpsReal + 1)
 
                             if mouthCenterLeft * 1.1 < mouthCenterLeftOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
                                 mouthCenterLeftOldLock = True
@@ -483,7 +487,7 @@ with mp_face_mesh.FaceMesh(
                                     mouthCenterRightOld = mouthCenterRight
                                 else:
                                     mouthCenterRightOld = (
-                                        (mouthCenterRightOld * args.fps) + mouthCenterRight) / (args.fps + 1)
+                                        (mouthCenterRightOld * fpsReal) + mouthCenterRight) / (fpsReal + 1)
 
                             if mouthCenterRight * 1.05 < mouthCenterRightOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
                                 mouthCenterRightOldLock = True
@@ -497,13 +501,9 @@ with mp_face_mesh.FaceMesh(
                 ##############################
                 if args.avatar > 0 or args.view > 0:
 
-                    frameTime = time.time()
-                    fps = 1 / (frameTime - oldframeTime)
-                    oldframeTime = frameTime
-
                     cv2.rectangle(showInCv, (0, 0), (300, 300), (0, 0, 0), -1)
 
-                    cv2.putText(showInCv, f"FPS {int(fps)}", (20, 40),
+                    cv2.putText(showInCv, f"FPS {int(fpsReal)}", (20, 40),
                                 cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 1)
 
                     cv2.putText(showInCv, f"Left Eye  {int(leftEyeBlink)}", (20, 80),

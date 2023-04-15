@@ -81,12 +81,12 @@ class WebcamSource(VideoSource):
         self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
         self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
         self._capture.set(cv2.CAP_PROP_GAIN, 0)
         self._capture.set(cv2.CAP_PROP_EXPOSURE, (1 / (fps / 10000)))
         self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture.set(cv2.CAP_PROP_FPS, fps)
+        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
         # self._capture.set(cv2.CAP_PROP_AUTO_WB, 1)
         # self._capture.set(cv2.CAP_PROP_BRIGHTNESS, 100)
