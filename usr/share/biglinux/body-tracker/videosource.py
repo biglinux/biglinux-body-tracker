@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from PIL import Image
 
-
 class VideoSource:
     def __init__(self, flip=False, display=False, dtype=np.uint8):
         self._name = "VideoSource"
@@ -51,12 +50,9 @@ class VideoSource:
         self.release()
 
     def gain(self, gain):
-        # self._capture = cv2.VideoCapture(0)
         self._capture.set(cv2.CAP_PROP_GAIN, gain)
         self._capture.set(cv2.CAP_PROP_BRIGHTNESS, gain / 12)
         self._capture.set(cv2.CAP_PROP_CONTRAST, gain / 6)
-        # self._capture.set(cv2.CAP_PROP_SATURATION, 20)
-        # self._capture.set(cv2.CAP_PROP_SHARPNESS, 20)
         self._capture.set(cv2.CAP_PROP_GAMMA, gain / 4)
 
     def show(self, frame, webcamx, webcamy):
@@ -87,17 +83,6 @@ class WebcamSource(VideoSource):
         self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture.set(cv2.CAP_PROP_FPS, fps)
         self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
-
-        # self._capture.set(cv2.CAP_PROP_AUTO_WB, 1)
-        # self._capture.set(cv2.CAP_PROP_BRIGHTNESS, 100)
-        # self._capture.set(cv2.CAP_PROP_CONTRAST, 20)
-        # self._capture.set(cv2.CAP_PROP_SATURATION, 20)
-        # self._capture.set(cv2.CAP_PROP_SHARPNESS, 20)
-        # self._capture.set(cv2.CAP_PROP_GAMMA, 200)
-        # self._capture.set(cv2.CAP_PROP_GAIN, 10)
-
-        # self._capture.set(cv2.CAP_PROP_ZOOM, 0.5)
-        # self._capture.set(cv2.CAP_PROP_AUTOFOCUS, autofocus)
         self._capture.set(cv2.CAP_PROP_FOCUS, absolute_focus / 255)
 
 
