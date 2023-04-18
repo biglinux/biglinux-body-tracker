@@ -135,7 +135,8 @@ def tkTooltipChange(text, color, bg, mouseX, mouseY):
         )
     )
     # How to close
-    tkTooltip.configure(background="#000000", borderwidth=2, relief="groove")
+    tkTooltip.configure(background="#000000")
+    # tkTooltip.configure(background="#000000", borderwidth=2, relief="groove")
     # Font
     l = tk.Label(font=("Ubuntu Mono", tooltipFontSize))
     l.pack(expand=True)
@@ -408,6 +409,13 @@ with mp_face_mesh.FaceMesh(
                 # Blink to mouse click start
                 ############################
                 if args.blinkToClick == True:
+                    
+                    
+                    if rightClicked == True:
+                        tkTooltip.update()
+
+                    if leftClicked == True:
+                        tkTooltip.update()
 
                     # Calculate using 2d information about 3 top points and 3 bottom points
                     rightEyeBlink = calculate_distance2D([385, 386, 387], [373, 374, 380])
@@ -432,12 +440,10 @@ with mp_face_mesh.FaceMesh(
                         #                 mouse.position[0] + 30, mouse.position[1] + 30)
                     else:
                         # if tooltipWait == True:
-                        #     tkTooltip.destroy()
-                        #     tkTooltip = tk.Tk()
-                        # 
-                        # if rightClicked == True:
-                        #     tkTooltipChange("R", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
-                            
+                            # tkTooltip.destroy()
+                            # tkTooltip = tk.Tk()
+
+                        
                         if rightEyeBlink < rightEyeBlinkOld * 0.5 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                             confirmRightClick += 1
                             standByClick = True
@@ -446,6 +452,7 @@ with mp_face_mesh.FaceMesh(
                                 mouse.press(Button.right)
                                 tooltipWait = False
                                 rightClicked = True
+                                tkTooltipChange("R", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
                                 # playsound('click.wav', block=False)
                         else:
                             confirmRightClick = 1
@@ -457,9 +464,8 @@ with mp_face_mesh.FaceMesh(
                                 rightClicked = False
                                 standByClick = False
                                 tooltipWait = True
-
-                        # if leftClicked == True:
-                        #     tkTooltipChange("L", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
 
                         if leftEyeBlink < leftEyeBlinkOld * 0.5 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False:
                             confirmLeftClick += 1
@@ -468,6 +474,8 @@ with mp_face_mesh.FaceMesh(
                                 mouse.press(Button.left)
                                 tooltipWait = False
                                 leftClicked = True
+                                tkTooltipChange("L", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
+
                                 # playsound('click.wav', block=False)
                         else:
                             confirmLeftClick = 1
@@ -479,6 +487,8 @@ with mp_face_mesh.FaceMesh(
                                 leftClicked = False
                                 standByClick = False
                                 tooltipWait = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
 
                         if ((leftEyeBlink < leftEyeNormalized * 0.8) or (rightEyeBlink < rightEyeNormalized * 0.8)) and (mousePointXabs < 3 or mousePointYabs < 3) and leftClicked == False and rightClicked == False:
                             if zeroPointX > mousePointX: zeroPointX = zeroPointX - ((zeroPointX - mouseMoveX) * 0.1)
@@ -489,6 +499,9 @@ with mp_face_mesh.FaceMesh(
                                 zeroPointY = zeroPointY - ((zeroPointY - mouseMoveY) * 0.1)
                             else:
                                 zeroPointY = zeroPointY - ((mouseMoveY - zeroPointY) * 0.1)
+
+
+
                         ####################
                         # Scroll with mouth
                         ####################
