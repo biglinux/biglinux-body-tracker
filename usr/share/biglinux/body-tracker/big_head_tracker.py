@@ -275,8 +275,8 @@ mouseLeftClickSensitivity = 0.8
 mouseRightClickSensitivity = 0.8
 disableClickInMovementValue = 5
 mouseFast = False
-confirmLeftClickValue = 2
-confirmRightClickValue = 2
+confirmLeftClickValue = 3
+confirmRightClickValue = 3
 leftEyeLine = []
 rightEyeLine = []
 line1 = []
@@ -394,7 +394,7 @@ with mp_face_mesh.FaceMesh(
                         leftEyeBlinkOld = ((leftEyeBlinkOld * fpsReal) + leftEyeBlink) / (fpsReal + 1)
 
                     # Disable click if close two eyes
-                    if leftEyeBlink < leftEyeBlinkOld * 0.8 and rightEyeBlink < rightEyeBlinkOld * 0.8:
+                    if leftEyeBlink < leftEyeBlinkOld * 0.7 and rightEyeBlink < rightEyeBlinkOld * 0.7:
                         standByClick = True
                         confirmLeftClick = 1
                         confirmRightClick = 1
