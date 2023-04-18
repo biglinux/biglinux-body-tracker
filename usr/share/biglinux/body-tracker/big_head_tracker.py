@@ -303,6 +303,35 @@ with mp_face_mesh.FaceMesh(
 ) as face_mesh:
     for idx, (frame, frame_rgb) in enumerate(source):
         
+        
+        #################################################################
+        # Auto adjust Brightness Contrast Gama and Gain using eye region
+        #################################################################
+        if args.autoBrightness == 1:
+            fpsBrightness += 1
+            if fpsBrightness > 5:
+                # Process facemesh results
+                results = face_mesh.process(frame_rgb)
+                if results.multi_face_landmarks:
+                    landmarks = results.multi_face_landmarks[0].landmark
+                    left_eye_roi, right_eye_roi = get_eyes_roi(frame, landmarks)
+                    eye_rois = [left_eye_roi, right_eye_roi]
+                    brightness_values = []
+
+                    for eye_roi in eye_rois:
+                        brightness = np.average(eye_roi)
+                        brightness_values.append(brightness)
+
+                    brightness_average = np.mean(brightness_values)
+
+                    if brightness_average < 150:
+                        gain += 10
+                        fpsBrightness = 0
+                    elif brightness_average > 180:
+                        gain -= 10
+                    fpsBrightness = 0
+                source.gain(gain)
+        
         frameTime = time.time()
         fpsReal = int(1 / (frameTime - oldframeTime))
         oldframeTime = frameTime
@@ -619,30 +648,4 @@ with mp_face_mesh.FaceMesh(
                             line1 = plotting_ear(pts_plot, line1, min_value, max_value)
                         countFrames += 1
 
-        #################################################################
-        # Auto adjust Brightness Contrast Gama and Gain using eye region
-        #################################################################
-        if args.autoBrightness == 1:
-            fpsBrightness += 1
-            if fpsBrightness > 5:
-                # Process facemesh results
-                results = face_mesh.process(frame_rgb)
-                if results.multi_face_landmarks:
-                    landmarks = results.multi_face_landmarks[0].landmark
-                    left_eye_roi, right_eye_roi = get_eyes_roi(frame, landmarks)
-                    eye_rois = [left_eye_roi, right_eye_roi]
-                    brightness_values = []
 
-                    for eye_roi in eye_rois:
-                        brightness = np.average(eye_roi)
-                        brightness_values.append(brightness)
-
-                    brightness_average = np.mean(brightness_values)
-
-                    if brightness_average < 150:
-                        gain += 10
-                        fpsBrightness = 0
-                    elif brightness_average > 180:
-                        gain -= 10
-                    fpsBrightness = 0
-                source.gain(gain)
