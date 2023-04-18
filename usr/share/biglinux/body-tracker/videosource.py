@@ -50,10 +50,24 @@ class VideoSource:
         self.release()
 
     def gain(self, gain):
-        self._capture.set(cv2.CAP_PROP_GAIN, gain)
-        self._capture.set(cv2.CAP_PROP_BRIGHTNESS, gain / 12)
-        self._capture.set(cv2.CAP_PROP_CONTRAST, gain / 6)
-        self._capture.set(cv2.CAP_PROP_GAMMA, gain / 4)
+
+        Gain = self._capture.get(cv2.CAP_PROP_GAIN)
+        Brightness = self._capture.get(cv2.CAP_PROP_BRIGHTNESS)
+        Contrast = self._capture.get(cv2.CAP_PROP_CONTRAST)
+        Gamma = self._capture.get(cv2.CAP_PROP_GAMMA)
+
+        if gain == 1:
+            self._capture.set(cv2.CAP_PROP_GAIN, Gain + 1)
+            self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness + 1)
+            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast + 1)
+            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma + 1)
+        elif gain == 0:
+            self._capture.set(cv2.CAP_PROP_GAIN, Gain - 1)
+            self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness - 1)
+            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast - 1)
+            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma - 1)
+
+
 
     def show(self, frame, webcamx, webcamy):
         cv2.namedWindow("BigHeadTrack", cv2.WINDOW_GUI_NORMAL)
@@ -82,7 +96,7 @@ class WebcamSource(VideoSource):
         self._capture.set(cv2.CAP_PROP_EXPOSURE, (1 / (fps / 10000)))
         self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture.set(cv2.CAP_PROP_FPS, fps)
-        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)
         self._capture.set(cv2.CAP_PROP_FOCUS, absolute_focus / 255)
 
 
