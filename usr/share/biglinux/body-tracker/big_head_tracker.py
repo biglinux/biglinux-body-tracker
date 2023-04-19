@@ -110,7 +110,7 @@ arg_info = {
 #####################
 tkTooltip = tk.Tk()
 
-
+# Show text using tk
 def tkTooltipChange(text, color, bg, mouseX, mouseY):
     tooltipText = text
     tooltipTextColor = color
@@ -141,6 +141,33 @@ def tkTooltipChange(text, color, bg, mouseX, mouseY):
     l = tk.Label(font=("Ubuntu Mono", tooltipFontSize))
     l.pack(expand=True)
     l.config(text=tooltipText, fg=tooltipTextColor, bg=tooltipBgColor)
+    tkTooltip.update()
+
+
+# Only show square colored
+def tkTooltipOnlyColor(color, bg, mouseX, mouseY, tooltipWidth, tooltipHeight):
+    # Disable Window Border
+    tkTooltip.wm_overrideredirect(True)
+
+    # Width x Height + Left margin + Right margin
+    if mouse.position[0] > 300:
+        mouseX = mouseX - tooltipWidth - 60
+
+    if mouse.position[1] > 180:
+        mouseY = mouseY - tooltipHeight - 60
+
+    tkTooltip.geometry(
+        f"{tooltipWidth}x{tooltipHeight}+{mouseX}+{mouseY}".format(
+            tkTooltip.winfo_screenwidth(), tkTooltip.winfo_screenheight()
+        )
+    )
+
+    # Configure a cor de fundo do canvas como transparente
+    canvas = tk.Canvas(tkTooltip, width=tooltipWidth, height=tooltipHeight, bg=bg, highlightthickness=0)
+    canvas.pack()
+
+    # How to close
+    tkTooltip.configure(background=bg)
     tkTooltip.update()
 
 
@@ -407,9 +434,11 @@ with mp_face_mesh.FaceMesh(
                         
                         
                         if rightClicked == True:
+                            tkTooltipOnlyColor("#ff0000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
                             tkTooltip.update()
 
                         if leftClicked == True:
+                            tkTooltipOnlyColor("#00b21f", "#00b21f", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
                             tkTooltip.update()
 
                         # Calculate using 2d information about 3 top points and 3 bottom points
@@ -447,7 +476,8 @@ with mp_face_mesh.FaceMesh(
                                     mouse.press(Button.right)
                                     tooltipWait = False
                                     rightClicked = True
-                                    tkTooltipChange("R", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
+                                    tkTooltipOnlyColor("#ff0000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                    # tkTooltipChange("R", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
                                     # playsound('click.wav', block=False)
                             else:
                                 confirmRightClick = 1
@@ -469,7 +499,8 @@ with mp_face_mesh.FaceMesh(
                                     mouse.press(Button.left)
                                     tooltipWait = False
                                     leftClicked = True
-                                    tkTooltipChange("L", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
+                                    tkTooltipOnlyColor("#00b21f", "#00b21f", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                    # tkTooltipChange("L", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
 
                                     # playsound('click.wav', block=False)
                             else:
