@@ -10,7 +10,7 @@ import sys
 
 from pynput.mouse import Button, Controller  # para usar o mouse / to use mouse
 import tkinter as tk  # para exibir dicas de ferramentas / to show tooltip
-from playsound import playsound  # para reproduzir áudio / to play audio
+#from playsound import playsound  # para reproduzir áudio / to play audio
 import time
 import cv2
 
@@ -235,13 +235,14 @@ for arg_name, arg_details in arg_info.items():
 # Função para calcular a distância entre pontos em eixos x e y - 2D
 # Function to calculate the distance between points in axes x and y - 2D
 def calculate_distance2D(top_indices, bottom_indices):
-    top_pointsX = [landmarks_mean[index][0] for index in top_indices]
-    bottom_pointsX = [landmarks_mean[index][0] for index in bottom_indices]
-    top_pointsY = [landmarks_mean[index][1] for index in top_indices]
-    bottom_pointsY = [landmarks_mean[index][1] for index in bottom_indices]
-    top_mean = np.sum(top_pointsX + top_pointsY)
-    bottom_mean = np.sum(bottom_pointsX + bottom_pointsY)
-    distance = np.linalg.norm((bottom_mean + 2) - (top_mean + 2))
+    top_pointsX = np.array([landmarks_mean[index][0] for index in top_indices])
+    bottom_pointsX = np.array([landmarks_mean[index][0] for index in bottom_indices])
+    top_pointsY = np.array([landmarks_mean[index][1] for index in top_indices])
+    bottom_pointsY = np.array([landmarks_mean[index][1] for index in bottom_indices])
+    distance_x = np.sum(np.abs(np.sum(bottom_pointsX + 2) - np.sum(top_pointsX + 2)))
+    distance_y = np.sum(np.abs(np.sum(bottom_pointsY + 2) - np.sum(top_pointsY + 2)))
+
+    distance = np.sum(distance_x + distance_y)
 
     return distance * 500
 
@@ -330,8 +331,8 @@ mouseLeftClickSensitivity = 0.8
 mouseRightClickSensitivity = 0.8
 disableClickInMovementValue = 5
 mouseFast = False
-confirmLeftClickValue = 2
-confirmRightClickValue = 2
+confirmLeftClickValue = 1
+confirmRightClickValue = 1
 leftEyeLine = []
 rightEyeLine = []
 line1 = []
@@ -401,7 +402,7 @@ with mp_face_mesh.FaceMesh(
                     brightness_average = np.mean(brightness_values)
                     #print(brightness_average)
 
-                    if brightness_average < 170:
+                    if brightness_average < 150:
                         gain = 1
                         source.gain(gain)
                     elif brightness_average > 200:
@@ -518,7 +519,7 @@ with mp_face_mesh.FaceMesh(
 
                         # Caso o clique esquerdo do mouse seja constante
                         # If left mouse click is constant
-                         if leftClickedConstant == True:
+                        if leftClickedConstant == True:
                             tkTooltipOnlyColor("#000000", "#00ff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
 
                         if leftClicked == True:
@@ -557,10 +558,10 @@ with mp_face_mesh.FaceMesh(
                                 tkTooltip.destroy()
                                 tkTooltip = tk.Tk()
 
-                        # Calcular usando informações 2D sobre os 3 pontos superiores e 3 pontos inferiores dos olhos
-                        # Calculate using 2D information about 3 top points and 3 bottom points of the eyes
-                        rightEyeBlink = calculate_distance2D([385, 386, 387], [373, 374, 380])
-                        leftEyeBlink = calculate_distance2D([158, 159, 160], [163, 145, 144])
+                        # Calcular usando informações 2D sobre os 3 pontos superiores e 3 pontos inferiores dos olhos, menos 4 pixels por cada verificação
+                        # Calculate using 2D information about 3 top points and 3 bottom points of the eyes, less 4 pixels for any point
+                        rightEyeBlink = calculate_distance2D([385, 386, 387], [373, 374, 380]) - 12
+                        leftEyeBlink = calculate_distance2D([158, 159, 160], [163, 145, 144]) - 12
 
                         # Em espera de clique, pare para atualizar o valor normalizado
                         # In stand by click, stop to refresh normalized value
@@ -746,7 +747,7 @@ with mp_face_mesh.FaceMesh(
 
                                 # Detectar abertura da boca e rolar a tela
                                 # Detect mouth opening and scroll the screen
-                                 if mouthCenterLeft * 1.1 < mouthCenterLeftOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
+                                if mouthCenterLeft * 1.1 < mouthCenterLeftOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
                                     mouthCenterLeftOldLock = True
                                     mouse.scroll(0, ((mouthCenterLeftOld - mouthCenterLeft) / 3))
 
