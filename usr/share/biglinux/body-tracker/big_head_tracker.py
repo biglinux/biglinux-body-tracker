@@ -163,7 +163,7 @@ def tkTooltipOnlyColor(color, bg, mouseX, mouseY, tooltipWidth, tooltipHeight):
     )
 
     # Configure a cor de fundo do canvas como transparente
-    canvas = tk.Canvas(tkTooltip, width=tooltipWidth, height=tooltipHeight, bg=bg, highlightthickness=0)
+    canvas = tk.Canvas(tkTooltip, width=tooltipWidth, height=tooltipHeight, borderwidth=2, bg=bg, highlightbackground=color, highlightthickness=2)
     canvas.pack()
 
     # How to close
@@ -229,7 +229,7 @@ def calculate_distance3D(top_indices, bottom_indices):
     top_mean = np.sum(top_points)
     bottom_mean = np.sum(bottom_points)
     distance = np.linalg.norm((bottom_mean + 2) - (top_mean + 2))
-    print(distance)
+    #print(distance)
 
     return distance * 500
 
@@ -266,6 +266,14 @@ mouse = Controller()  # Enable mouse controller
 ######################
 # Init variables
 ######################
+leftClickedConstant = False
+scrollModeVertical = False
+scrollModeHorizontal = False
+changeLeftMove = False
+leftMoved = 'no'
+changeRightMove = False
+rightMoved = 'no'
+stopCursor = False
 slowMove = 10
 rightEyeBlinkOld = 0
 leftEyeBlinkOld = 0
@@ -295,8 +303,8 @@ mouseLeftClickSensitivity = 0.8
 mouseRightClickSensitivity = 0.8
 disableClickInMovementValue = 5
 mouseFast = False
-confirmLeftClickValue = 3
-confirmRightClickValue = 3
+confirmLeftClickValue = 2
+confirmRightClickValue = 2
 leftEyeLine = []
 rightEyeLine = []
 line1 = []
@@ -306,8 +314,8 @@ pts_plot = deque(maxlen=64)
 pts_rightEye = deque(maxlen=64)
 countFrames = 0
 oldframeTime = 0
-source = WebcamSource(width=args.webcamx, height=args.webcamy,
-                      fps=args.fps, camera_id=args.webcamid)
+fpsRealMean = args.fps
+source = WebcamSource(width=args.webcamx, height=args.webcamy, fps=args.fps, camera_id=args.webcamid)
 gain = 400
 fpsBrightness = 0
 
@@ -331,6 +339,7 @@ with mp_face_mesh.FaceMesh(
             fpsBrightness += 1        
         frameTime = time.time()
         fpsReal = int(1 / (frameTime - oldframeTime))
+        fpsRealMean = (fpsReal + (fpsRealMean * 10)) / 11
         oldframeTime = frameTime
 
         ############################
@@ -353,7 +362,7 @@ with mp_face_mesh.FaceMesh(
                     brightness_values.append(brightness)
 
                     brightness_average = np.mean(brightness_values)
-                    print(brightness_average)
+                    #print(brightness_average)
 
                     if brightness_average < 170:
                         gain = 1
@@ -412,34 +421,89 @@ with mp_face_mesh.FaceMesh(
                             mousePointXApply = mousePointX * mousePointXabs / (args.slowMouseMoveX)
                             mousePointYApply = mousePointY * mousePointYabs / (args.slowMouseMoveY)
 
-                        if scrollMouse == False:
+                        if stopCursor == False:
                             mouse.move(int(mousePointXApply), int(mousePointYApply))
 
-                        # Change zeroPointX when mouse on limit screen
-                        if mousePositionFrameX == mouse.position[0] and mousePointXabs > 1:
-                            zeroPointX = zeroPointX - ((zeroPointX - mouseMoveX) * 0.1)
+                            # Change zeroPointX when mouse on limit screen
+                            if mousePositionFrameX == mouse.position[0] and mousePointXabs > 1:
+                                zeroPointX = zeroPointX - ((zeroPointX - mouseMoveX) * 0.1)
 
-                        # Change zeroPointY when mouse on limit screen
-                        if mousePositionFrameY == mouse.position[1] and mousePointYabs > 1:
-                            zeroPointY = zeroPointY - ((zeroPointY - mouseMoveY) * 0.1)
+                            # Change zeroPointY when mouse on limit screen
+                            if mousePositionFrameY == mouse.position[1] and mousePointYabs > 1:
+                                zeroPointY = zeroPointY - ((zeroPointY - mouseMoveY) * 0.1)
 
-                        mousePositionFrameX = mouse.position[0]
-                        mousePositionFrameY = mouse.position[1]
-
+                            mousePositionFrameX = mouse.position[0]
+                            mousePositionFrameY = mouse.position[1]
 
                     ############################
                     # Blink to mouse click start
                     ############################
                     if args.blinkToClick == True:
                         
-                        
                         if rightClicked == True:
-                            tkTooltipOnlyColor("#ff0000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
-                            tkTooltip.update()
+
+                            if changeRightMove == True and rightMoved == 'right':
+                                tkTooltipOnlyColor("#000000", "#ffff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                changeRightMove = False
+
+                            elif changeRightMove == True and rightMoved == 'left':
+                                tkTooltipOnlyColor("#000000", "#00ff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                changeRightMove = False
+
+                            if mousePointX > args.minimalMouseMoveX and rightMoved != 'right':
+                                rightMoved = 'right'
+                                changeRightMove = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
+
+                            elif mousePointX < - args.minimalMouseMoveX and rightMoved != 'left':
+                                rightMoved = 'left'
+                                changeRightMove = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
+
+
+                            elif rightMoved == 'no':
+                                tkTooltipOnlyColor("#000000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+
+#                            print(f"x {int(mousePointX)}")
+#                            print(f"y {int(mousePointYApply)}")
+
+
+                        if leftClickedConstant == True:
+                            tkTooltipOnlyColor("#000000", "#00ff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
 
                         if leftClicked == True:
-                            tkTooltipOnlyColor("#00b21f", "#00b21f", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
-                            tkTooltip.update()
+
+                            if changeLeftMove == True and leftMoved == 'right':
+                                tkTooltipOnlyColor("#000000", "#ffff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                changeLeftMove = False
+
+                            elif changeLeftMove == True and leftMoved == 'left':
+                                tkTooltipOnlyColor("#000000", "#00ff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                changeLeftMove = False
+
+                            elif changeLeftMove == True and leftMoved == 'bottom':
+                                tkTooltipOnlyColor("#000000", "#2266ff", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                changeLeftMove = False
+
+                            if mousePointX > args.slowMouseMoveX and leftMoved != 'right':
+                                leftMoved = 'right'
+                                changeLeftMove = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
+
+                            elif mousePointX < - args.slowMouseMoveX and leftMoved != 'left':
+                                leftMoved = 'left'
+                                changeLeftMove = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
+
+                            elif mousePointY > args.slowMouseMoveY and leftMoved != 'bottom':
+                                leftMoved = 'bottom'
+                                changeLeftMove = True
+                                tkTooltip.destroy()
+                                tkTooltip = tk.Tk()
 
                         # Calculate using 2d information about 3 top points and 3 bottom points
                         rightEyeBlink = calculate_distance2D([385, 386, 387], [373, 374, 380])
@@ -451,55 +515,65 @@ with mp_face_mesh.FaceMesh(
                         if standByClick == False:
                             rightEyeNormalized = np.mean([rightEyeBlink, rightEyeBlinkOld])
                             leftEyeNormalized = np.mean([leftEyeBlink, leftEyeBlinkOld])
-                            rightEyeBlinkOld = ((rightEyeBlinkOld * fpsReal) + rightEyeBlink) / (fpsReal + 1)
-                            leftEyeBlinkOld = ((leftEyeBlinkOld * fpsReal) + leftEyeBlink) / (fpsReal + 1)
+                            rightEyeBlinkOld = ((rightEyeBlinkOld * fpsRealMean) + rightEyeBlink) / (fpsRealMean + 1)
+                            leftEyeBlinkOld = ((leftEyeBlinkOld * fpsRealMean) + leftEyeBlink) / (fpsRealMean + 1)
 
                         # Disable click if close two eyes
-                        if leftEyeBlink < leftEyeBlinkOld * 0.7 and rightEyeBlink < rightEyeBlinkOld * 0.7:
+                        if leftEyeBlink < leftEyeBlinkOld * 0.6 and rightEyeBlink < rightEyeBlinkOld * 0.6:
                             standByClick = True
-                            confirmLeftClick = 1
-                            confirmRightClick = 1
-                            tooltipWait = True
-                            # tkTooltipChange("Wait", "#00b21f", "#000000",
-                            #                 mouse.position[0] + 30, mouse.position[1] + 30)
                         else:
-                            # if tooltipWait == True:
-                                # tkTooltip.destroy()
-                                # tkTooltip = tk.Tk()
-
-                            
                             if rightEyeBlink < rightEyeBlinkOld * 0.5 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 confirmRightClick += 1
                                 standByClick = True
 
-                                if confirmRightClick >= confirmRightClickValue:
-                                    mouse.press(Button.right)
+                                if confirmRightClick >= fpsRealMean / 6:
+                                    stopCursor = True
                                     tooltipWait = False
                                     rightClicked = True
-                                    tkTooltipOnlyColor("#ff0000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
-                                    # tkTooltipChange("R", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
-                                    # playsound('click.wav', block=False)
+                                    scrollModeVertical = False
+                                    scrollModeHorizontal = False
+                                    leftClickedConstant = False
+                                    if rightMoved != 'no':
+                                        rightMoved = 'clean'
+                                    leftMoved = 'no'
+
+                                    #tkTooltipOnlyColor("#ff0000", "#ff0000", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
                             else:
                                 confirmRightClick = 1
-                                if rightClicked == False and leftClicked == False:
-                                    standByClick = False
-
-                                elif rightEyeBlink > rightEyeNormalized and rightClicked == True:
-                                    mouse.release(Button.right)
+                                if rightEyeBlink > rightEyeNormalized and rightClicked == True:
+                                    if rightMoved == 'no':
+                                        mouse.press(Button.right)
+                                        mouse.release(Button.right)
+                                        stopCursor = False
+                                        tkTooltip.destroy()
+                                        tkTooltip = tk.Tk()
+                                    if rightMoved == 'right':
+                                        scrollModeVertical = True
+                                    if rightMoved == 'left':
+                                        scrollModeHorizontal = True
+                                    if rightMoved == 'clean':
+                                        tkTooltip.destroy()
+                                        tkTooltip = tk.Tk()
+                                        stopCursor = False
+                                        rightMoved = 'no'
                                     rightClicked = False
                                     standByClick = False
-                                    tooltipWait = True
-                                    tkTooltip.destroy()
-                                    tkTooltip = tk.Tk()
+                                    tooltipWait = False
 
-                            if leftEyeBlink < leftEyeBlinkOld * 0.5 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False:
+                            if leftEyeBlink < leftEyeBlinkOld * 0.5 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 confirmLeftClick += 1
                                 standByClick = True
-                                if confirmLeftClick >= confirmLeftClickValue and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
-                                    mouse.press(Button.left)
+
+                                if confirmLeftClick >= fpsRealMean / 6:
+                                    stopCursor = True
                                     tooltipWait = False
                                     leftClicked = True
-                                    tkTooltipOnlyColor("#00b21f", "#00b21f", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
+                                    scrollModeVertical = False
+                                    scrollModeHorizontal = False
+                                    leftClickedConstant = False
+                                    rightMoved = 'no'
+                                    leftMoved = 'no'
+                                    tkTooltipOnlyColor("#000000", "#00b21f", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
                                     # tkTooltipChange("L", "#00b21f", "#000000", mouse.position[0] + 30, mouse.position[1] + 30)
 
                                     # playsound('click.wav', block=False)
@@ -509,12 +583,44 @@ with mp_face_mesh.FaceMesh(
                                     standByClick = False
 
                                 elif leftEyeBlink > leftEyeNormalized and leftClicked == True:
-                                    mouse.release(Button.left)
+                                    if leftMoved == 'no':
+                                        mouse.press(Button.left)
+                                        mouse.release(Button.left)
+                                        stopCursor = False
+                                        tkTooltip.destroy()
+                                        tkTooltip = tk.Tk()
+                                    if leftMoved == 'right':
+                                        zeroPointX = mouseMoveX
+                                        zeroPointY = mouseMoveY
+                                        mouse.press(Button.left)
+                                        mouse.release(Button.left)
+                                        mouse.press(Button.left)
+                                        mouse.release(Button.left)
+                                        stopCursor = False
+                                        leftMoved = 'no'
+                                        tkTooltip.destroy()
+                                        tkTooltip = tk.Tk()
+                                    if leftMoved == 'left':
+                                        mouse.press(Button.left)
+                                        stopCursor = False
+                                        leftClickedConstant = True
+                                        zeroPointX = mouseMoveX
+                                        zeroPointY = mouseMoveY
+                                    if leftMoved == 'bottom':
+                                        zeroPointX = mouseMoveX
+                                        zeroPointY = mouseMoveY
+                                        mouse.press(Button.middle)
+                                        mouse.release(Button.middle)
+                                        stopCursor = False
+                                        leftMoved = 'no'
+                                        tkTooltip.destroy()
+                                        tkTooltip = tk.Tk()
                                     leftClicked = False
                                     standByClick = False
-                                    tooltipWait = True
+                                    tooltipWait = False
                                     tkTooltip.destroy()
                                     tkTooltip = tk.Tk()
+
 
                             if ((leftEyeBlink < leftEyeNormalized * 0.8) or (rightEyeBlink < rightEyeNormalized * 0.8)) and (mousePointXabs < 3 or mousePointYabs < 3) and leftClicked == False and rightClicked == False:
                                 if zeroPointX > mousePointX: zeroPointX = zeroPointX - ((zeroPointX - mouseMoveX) * 0.1)
@@ -526,6 +632,31 @@ with mp_face_mesh.FaceMesh(
                                 else:
                                     zeroPointY = zeroPointY - ((mouseMoveY - zeroPointY) * 0.1)
 
+                            ####################
+                            # Scroll mode Vertical
+                            ####################
+                            if scrollModeVertical == True and mousePointYabs > args.minimalMouseMoveY and slowMove < 10:
+                                scrollValueX = mousePointYApply / (fpsRealMean / 2)
+                                if scrollValueX < 1 and scrollValueX > 0:
+                                    scrollValueX = 1
+                                elif scrollValueX > -1 and scrollValueX < 0:
+                                    scrollValueX = -1
+                                mouse.scroll(0, - scrollValueX)
+                                slowMove = 10 + (fpsRealMean / 10)
+                                print(mousePointYApply)
+
+                            ####################
+                            # Scroll mode Horizontal
+                            ####################
+                            if scrollModeHorizontal == True and mousePointXabs > args.minimalMouseMoveX and slowMove < 10:
+                                scrollValueY = mousePointXApply / (fpsRealMean / 2)
+                                if scrollValueY < 1 and scrollValueY > 0:
+                                    scrollValueY = 1
+                                elif scrollValueY > -1 and scrollValueY < 0:
+                                    scrollValueY = -1
+                                mouse.scroll(scrollValueY, 0)
+                                slowMove = 10 + (fpsRealMean / 10)
+                                print(mousePointYApply)
 
 
                             ####################
@@ -537,7 +668,7 @@ with mp_face_mesh.FaceMesh(
                                     if mouthCenterLeftOld == 0:
                                         mouthCenterLeftOld = mouthCenterLeft
                                     else:
-                                        mouthCenterLeftOld = ((mouthCenterLeftOld * fpsReal) + mouthCenterLeft) / (fpsReal + 1)
+                                        mouthCenterLeftOld = ((mouthCenterLeftOld * fpsRealMean) + mouthCenterLeft) / (fpsRealMean + 1)
 
                                 if mouthCenterLeft * 1.1 < mouthCenterLeftOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
                                     mouthCenterLeftOldLock = True
@@ -551,7 +682,7 @@ with mp_face_mesh.FaceMesh(
                                     if mouthCenterRightOld == 0:
                                         mouthCenterRightOld = mouthCenterRight
                                     else:
-                                        mouthCenterRightOld = ((mouthCenterRightOld * fpsReal) + mouthCenterRight) / (fpsReal + 1)
+                                        mouthCenterRightOld = ((mouthCenterRightOld * fpsRealMean) + mouthCenterRight) / (fpsRealMean + 1)
 
                                 if mouthCenterRight * 1.05 < mouthCenterRightOld and standByClick == False and (mousePointXabs < 2 or mousePointYabs < 2):
                                     mouthCenterRightOldLock = True
