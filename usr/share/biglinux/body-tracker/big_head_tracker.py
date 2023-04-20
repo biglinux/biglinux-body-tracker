@@ -526,7 +526,7 @@ with mp_face_mesh.FaceMesh(
                                 confirmRightClick += 1
                                 standByClick = True
 
-                                if confirmRightClick >= fpsRealMean / 6:
+                                if confirmRightClick >= fpsRealMean / 6 + confirmRightClickValue:
                                     stopCursor = True
                                     tooltipWait = False
                                     rightClicked = True
@@ -564,7 +564,7 @@ with mp_face_mesh.FaceMesh(
                                 confirmLeftClick += 1
                                 standByClick = True
 
-                                if confirmLeftClick >= fpsRealMean / 6:
+                                if confirmLeftClick >= fpsRealMean / 6 + confirmLeftClickValue:
                                     stopCursor = True
                                     tooltipWait = False
                                     leftClicked = True
