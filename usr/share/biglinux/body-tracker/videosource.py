@@ -55,18 +55,20 @@ class VideoSource:
         Brightness = self._capture.get(cv2.CAP_PROP_BRIGHTNESS)
         Contrast = self._capture.get(cv2.CAP_PROP_CONTRAST)
         Gamma = self._capture.get(cv2.CAP_PROP_GAMMA)
+        Backlight = self._capture.get(cv2.CAP_PROP_BACKLIGHT)
 
         if gain == 1:
-            self._capture.set(cv2.CAP_PROP_GAIN, Gain + 1)
+            self._capture.set(cv2.CAP_PROP_GAIN, Gain + 2)
             self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness + 1)
-            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast + 1)
+            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast + 2)
             self._capture.set(cv2.CAP_PROP_GAMMA, Gamma + 1)
+            self._capture.set(cv2.CAP_PROP_BACKLIGHT, Backlight + 1)
         elif gain == 0:
-            self._capture.set(cv2.CAP_PROP_GAIN, Gain - 1)
+            self._capture.set(cv2.CAP_PROP_GAIN, Gain - 2)
             self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness - 1)
-            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast - 1)
-            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma - 1)
-
+            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast - 2)
+            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma - 2)
+            self._capture.set(cv2.CAP_PROP_BACKLIGHT, Backlight - 1)
 
 
     def show(self, frame, webcamx, webcamy):
