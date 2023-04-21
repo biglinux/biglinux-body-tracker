@@ -265,18 +265,17 @@ def get_eyes_roi(frame, landmarks):
     height, width, _ = frame.shape
     eye_indices = [224, 444, 347, 229]
     # right_eye_indices = [362, 263, 466, 388]
-    eye_roy_array = []
 
     for index in eye_indices:
-        x, y = _normalized_to_pixel_coordinates(landmarks[index].x, landmarks[index].y, width, height)
-        eye_roy_array.append((x, y))
-
-    eye_roy_array = np.array(eye_roy_array)
-    eye_roy_array_rect = cv2.boundingRect(eye_roy_array)
-
-    eye_rois = frame[eye_roy_array_rect[1]:eye_roy_array_rect[1] + eye_roy_array_rect[3], eye_roy_array_rect[0]:eye_roy_array_rect[0] + eye_roy_array_rect[2]]
-
-    return eye_rois
+        pixelCordinates = _normalized_to_pixel_coordinates(landmarks[index].x, landmarks[index].y, width, height)
+        if pixelCordinates != None:
+            x, y = pixelCordinates
+            eye_roy_array = []
+            eye_roy_array.append((x, y))
+            eye_roy_array = np.array(eye_roy_array)
+            eye_roy_array_rect = cv2.boundingRect(eye_roy_array)
+            eye_rois = frame[eye_roy_array_rect[1]:eye_roy_array_rect[1] + eye_roy_array_rect[3], eye_roy_array_rect[0]:eye_roy_array_rect[0] + eye_roy_array_rect[2]]
+            return eye_rois
 
 
 ######################
@@ -394,22 +393,24 @@ with mp_face_mesh.FaceMesh(
                 results = face_mesh.process(frame_rgb)
                 if results.multi_face_landmarks:
                     landmarks = results.multi_face_landmarks[0].landmark
-                    brightness_values = []
+                    eyes_roi_value = get_eyes_roi(frame_rgb, landmarks)
 
-                    brightness = np.average(get_eyes_roi(frame_rgb, landmarks))
-                    brightness_values.append(brightness)
+                    if eyes_roi_value is not None:
+                        
+                        brightness_values = []
+                        brightness = np.average(eyes_roi_value)
+                        brightness_values.append(brightness)
+                        brightness_average = np.mean(brightness_values)
+                        #print(brightness_average)
 
-                    brightness_average = np.mean(brightness_values)
-                    #print(brightness_average)
-
-                    if brightness_average < 150:
-                        gain = 1
-                        source.gain(gain)
-                    elif brightness_average > 200:
-                        gain = 0
-                        source.gain(gain)
-                    else:
-                        fpsBrightness = 0
+                        if brightness_average < 150:
+                            gain = 1
+                            source.gain(gain)
+                        elif brightness_average > 200:
+                            gain = 0
+                            source.gain(gain)
+                        else:
+                            fpsBrightness = 0
                         
             ##########################################################
             # Visualização da webcam, avatar mostra apenas os pontos
@@ -573,12 +574,12 @@ with mp_face_mesh.FaceMesh(
 
                         # Desativar clique se fechar ambos os olhos
                         # Disable click if close both eyes
-                        if leftEyeBlink < leftEyeBlinkOld * 0.6 and rightEyeBlink < rightEyeBlinkOld * 0.6:
+                        if leftEyeBlink < leftEyeBlinkOld * 0.7 and rightEyeBlink < rightEyeBlinkOld * 0.7:
                             standByClick = True
                         else:
                             # Clique com o botão direito do mouse se o olho direito estiver fechado
                             # Right mouse click if right eye is closed
-                            if rightEyeBlink < rightEyeBlinkOld * 0.5 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
+                            if rightEyeBlink < rightEyeBlinkOld * 0.6 and (standByClick == False or confirmRightClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 confirmRightClick += 1
                                 standByClick = True
 
@@ -624,7 +625,7 @@ with mp_face_mesh.FaceMesh(
 
                             # Clique com o botão esquerdo do mouse se o olho esquerdo estiver fechado
                             # Left mouse click if left eye is closed
-                            if leftEyeBlink < leftEyeBlinkOld * 0.5 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
+                            if leftEyeBlink < leftEyeBlinkOld * 0.6 and (standByClick == False or confirmLeftClick > 1) and leftClicked == False and rightClicked == False and mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
                                 confirmLeftClick += 1
                                 standByClick = True
 
