@@ -2,6 +2,7 @@ import os
 import configparser
 import argparse
 
+
 def read_config(var_name=None, section_name='General', config_file='config.conf', default_value=None):
     home_dir = os.path.expanduser("~")
     config_dir = os.path.join(home_dir, '.config', 'biglinux-body-tracker')
@@ -34,6 +35,7 @@ def read_config(var_name=None, section_name='General', config_file='config.conf'
 
     return config[section_name][var_name]
 
+
 def write_config(var_name, var_value, section_name='General', config_file='config.conf'):
     home_dir = os.path.expanduser("~")
     config_dir = os.path.join(home_dir, '.config', 'biglinux-body-tracker')
@@ -57,12 +59,14 @@ def write_config(var_name, var_value, section_name='General', config_file='confi
     with open(config_path, 'w') as configfile:
         config.write(configfile)
 
+
 def get_value(var_name, default_value=None, section_name='General', config_file='config.conf'):
     config_value = read_config(var_name, section_name, config_file)
     if config_value is not None:
         return config_value
     else:
         return default_value
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process command line arguments.')
@@ -77,5 +81,3 @@ def main():
 
     print(f"View: {view}")
 
-if __name__ == '__main__':
-    main()
