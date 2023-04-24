@@ -34,6 +34,11 @@ arg_info = {
         'help': 'Mouse detection mode 1 or 2 or 3',
         'default': 2
     },
+    'startIsNeutral': {
+        'type': bool,
+        'help': 'Start position is neutral position True or False',
+        'default': True
+    },
     'webcamid': {
         'type': int,
         'help': 'Webcam ID',
@@ -550,12 +555,12 @@ with mp_face_mesh.FaceMesh(
                         # Calculate vertical movement from point 6 (nose) y and z axis
                         # mouseMoveY = math.atan((landmarks_mean[1][1] - landmarks_mean[152][1]) + (landmarks_mean[1][1] - landmarks_mean[10][1])) * 180
 
-
-                        mouseMoveX = ((math.atan((landmarks_mean[1][0] - ((landmarks_mean[454][0] + landmarks_mean[473][0]) / 2)) + (landmarks_mean[1][0] - ((landmarks_mean[234][0] + landmarks_mean[468][0]) / 2))) * 180))
+                        mouseMoveX = ((math.atan((landmarks_mean[1][0] - ((landmarks_mean[454][0] + landmarks_mean[473][0]) / 2)) + (landmarks_mean[1][0] - ((landmarks_mean[234][0] + landmarks_mean[468][0]) / 2))) * 300))
 
                         # Calcula a movimentação vertical a partir do eixo y e z do ponto 6 (nariz)
                         # Calculate vertical movement from point 6 (nose) y and z axis
-                        mouseMoveY = ((math.atan((landmarks_mean[1][1] - ((landmarks_mean[152][1] + landmarks_mean[473][1]) / 2)) + (landmarks_mean[1][1] - ((landmarks_mean[234][1] + landmarks_mean[468][1]) / 2))) * 180))
+                        # mouseMoveY = ((math.atan((landmarks_mean[1][1] - ((landmarks_mean[152][1] + landmarks_mean[473][1]) / 2)) + (landmarks_mean[1][1] - ((landmarks_mean[234][1] + landmarks_mean[468][1]) / 2))) * 300))
+                        mouseMoveY = math.atan((landmarks_mean[1][1] - landmarks_mean[152][1]) + (landmarks_mean[1][1] - landmarks_mean[10][1])) * 400
 
 
 
@@ -569,8 +574,12 @@ with mp_face_mesh.FaceMesh(
 
                         # Subtrai a posição atual da posição neutra
                         # Subtract the current position from the neutral position
-                        mousePointX = mouseMoveX # disabled
-                        mousePointY = mouseMoveY # disabled
+                        if args.startIsNeutral == True:
+                            mousePointX = mouseMoveX - zeroPointX2
+                            mousePointY = mouseMoveY - zeroPointY2
+                        else:
+                            mousePointX = mouseMoveX
+                            mousePointY = mouseMoveY
 
                         # Cria as variaveis com valores positivos dos movimentos, tornando valores negativos positivos
                         # Create variables with positive values of movements, making negative values positive
@@ -620,11 +629,8 @@ with mp_face_mesh.FaceMesh(
                                 mousePositionFrameX = mouse.position[0]
                                 mousePositionFrameY = mouse.position[1]
 
-
                                 # print(mousePointXApply)
                                 mouse.move(int(mousePointXApply), int(mousePointYApply))
-
-
 
 
 
