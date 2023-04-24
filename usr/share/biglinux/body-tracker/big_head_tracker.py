@@ -367,8 +367,10 @@ rightEyeBlinkOld = 0
 leftEyeBlinkOld = 0
 mouthCenterLeftOld = 0
 mouthCenterRightOld = 0
-confirmLeftClick = 0
-confirmRightClick = 0
+confirmLeftClick = 1
+confirmRightClick = 1
+confirmLeftClickValue = 2
+confirmRightClickValue = 2
 tooltipWait = False
 mouthCenterLeftOldLock = False
 mouthCenterRightOldLock = False
@@ -397,8 +399,6 @@ mouseLeftClickSensitivity = 0.8
 mouseRightClickSensitivity = 0.8
 disableClickInMovementValue = 5
 mouseFast = False
-confirmLeftClickValue = 0
-confirmRightClickValue = 0
 leftEyeLine = []
 rightEyeLine = []
 line1 = []
@@ -921,13 +921,11 @@ with mp_face_mesh.FaceMesh(
 
                         # Desativar clique se fechar ambos os olhos
                         # Disable click if close both eyes
-                        if leftEyeBlink < leftEyeBlinkOld * 0.7 and rightEyeBlink < rightEyeBlinkOld * 0.7:
-                            standByClick = True
-                        else:
+                        if not (leftEyeBlink < leftEyeBlinkOld * 0.63 and rightEyeBlink < rightEyeBlinkOld * 0.63):
 
                             # Clique com o botão direito do mouse se o olho direito estiver fechado
                             # Right mouse click if right eye is closed
-                            if rightEyeBlink < rightEyeBlinkOld * 0.6 and (not standByClick or confirmRightClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (leftMoved != 'no' and leftMoved != 'null') or (rightMoved != 'no' and rightMoved != 'null')):
+                            if rightEyeBlink < rightEyeBlinkOld * 0.6 and (not standByClick or confirmRightClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (leftMoved != 'no' and leftMoved != 'null') or (rightMoved != 'no' and rightMoved != 'null')):
                                 confirmRightClick += 1
 
                                 # Confirmar clique com o botão direito
@@ -981,7 +979,7 @@ with mp_face_mesh.FaceMesh(
 
                             # Clique com o botão esquerdo do mouse se o olho esquerdo estiver fechado
                             # Left mouse click if left eye is closed
-                            if leftEyeBlink < leftEyeBlinkOld * 0.6 and (not standByClick or confirmLeftClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (rightMoved != 'no' and rightMoved != 'null') or (leftMoved != 'no' and leftMoved != 'null')):
+                            if leftEyeBlink < leftEyeBlinkOld * 0.6 and (not standByClick or confirmLeftClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (rightMoved != 'no' and rightMoved != 'null') or (leftMoved != 'no' and leftMoved != 'null')):
                                 confirmLeftClick += 1
 
                                 # Confirmar clique com o botão esquerdo
