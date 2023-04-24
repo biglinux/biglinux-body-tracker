@@ -87,12 +87,12 @@ arg_info = {
     'slowMouseMoveY': {
         'type': int,
         'help': 'Slow mouse move Y',
-        'default': 6
+        'default': 9
     },
     'slowMouseMoveX': {
         'type': int,
         'help': 'Slow mouse move X',
-        'default': 6
+        'default': 9
     },
     'mouseSpeedX': {
         'type': int,
@@ -290,10 +290,10 @@ def tkTooltipOnlyColor(color, bg, mouseX, mouseY, tooltipWidth, tooltipHeight):
 # Function to calculate the distance between points in axes x and y - 2D
 #####################
 def calculate_distance2D(top_indices, bottom_indices):
-    top_pointsX = np.array([landmarks_mean[index][0] for index in top_indices])
-    bottom_pointsX = np.array([landmarks_mean[index][0] for index in bottom_indices])
-    top_pointsY = np.array([landmarks_mean[index][1] for index in top_indices])
-    bottom_pointsY = np.array([landmarks_mean[index][1] for index in bottom_indices])
+    top_pointsX = np.array([landmarks[index][0] for index in top_indices])
+    bottom_pointsX = np.array([landmarks[index][0] for index in bottom_indices])
+    top_pointsY = np.array([landmarks[index][1] for index in top_indices])
+    bottom_pointsY = np.array([landmarks[index][1] for index in bottom_indices])
     distance_x = np.sum(np.abs(np.sum(bottom_pointsX + 2) - np.sum(top_pointsX + 2)))
     distance_y = np.sum(np.abs(np.sum(bottom_pointsY + 2) - np.sum(top_pointsY + 2)))
     distance = np.sum(distance_x + distance_y)
@@ -591,12 +591,12 @@ with mp_face_mesh.FaceMesh(
                         # Calculate vertical movement from point 6 (nose) y and z axis
                         # mouseMoveY = math.atan((landmarks_mean[1][1] - landmarks_mean[152][1]) + (landmarks_mean[1][1] - landmarks_mean[10][1])) * 180
 
-                        mouseMoveX = - ((landmarks_mean[6][0] + landmarks_mean[352][0] + 2) - (landmarks_mean[6][0] + landmarks_mean[123][0] + 2)  * args.mouseSpeedX * 10)
+                        mouseMoveX = - ((landmarks_mean[6][0] + landmarks_mean[352][0] + 2) - (landmarks_mean[6][0] + landmarks_mean[123][0] + 2)  * args.mouseSpeedX * 5)
 
                         # Calcula a movimentação vertical a partir do eixo y e z do ponto 6 (nariz)
                         # Calculate vertical movement from point 6 (nose) y and z axis
                         # mouseMoveY = ((math.atan((landmarks_mean[1][1] - ((landmarks_mean[152][1] + landmarks_mean[473][1]) / 2)) + (landmarks_mean[1][1] - ((landmarks_mean[234][1] + landmarks_mean[468][1]) / 2))) * 300))
-                        mouseMoveY = - ((landmarks_mean[6][1] + landmarks_mean[352][1] + 2) - (landmarks_mean[6][1] + landmarks_mean[123][1] + 2)  * args.mouseSpeedY * 7)
+                        mouseMoveY = - ((landmarks_mean[6][1] + landmarks_mean[352][1] + 2) - (landmarks_mean[6][1] + landmarks_mean[123][1] + 2)  * args.mouseSpeedY * 5)
 
 
 
@@ -921,11 +921,11 @@ with mp_face_mesh.FaceMesh(
 
                         # Desativar clique se fechar ambos os olhos
                         # Disable click if close both eyes
-                        if not (leftEyeBlink < leftEyeBlinkOld * 0.63 and rightEyeBlink < rightEyeBlinkOld * 0.63):
+                        if not (leftEyeBlink < leftEyeBlinkOld * 0.7 and rightEyeBlink < rightEyeBlinkOld * 0.7):
 
                             # Clique com o botão direito do mouse se o olho direito estiver fechado
                             # Right mouse click if right eye is closed
-                            if rightEyeBlink < rightEyeBlinkOld * 0.6 and (not standByClick or confirmRightClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (leftMoved != 'no' and leftMoved != 'null') or (rightMoved != 'no' and rightMoved != 'null')):
+                            if rightEyeBlink < rightEyeBlinkOld * 0.68 and (not standByClick or confirmRightClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (leftMoved != 'no' and leftMoved != 'null') or (rightMoved != 'no' and rightMoved != 'null')):
                                 confirmRightClick += 1
 
                                 # Confirmar clique com o botão direito
@@ -979,7 +979,7 @@ with mp_face_mesh.FaceMesh(
 
                             # Clique com o botão esquerdo do mouse se o olho esquerdo estiver fechado
                             # Left mouse click if left eye is closed
-                            if leftEyeBlink < leftEyeBlinkOld * 0.6 and (not standByClick or confirmLeftClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (rightMoved != 'no' and rightMoved != 'null') or (leftMoved != 'no' and leftMoved != 'null')):
+                            if leftEyeBlink < leftEyeBlinkOld * 0.68 and (not standByClick or confirmLeftClick > 0) and not leftClicked and not rightClicked and ((mousePointXabs < args.slowMouseMoveX * 2 and mousePointYabs < args.slowMouseMoveY * 2) or (rightMoved != 'no' and rightMoved != 'null') or (leftMoved != 'no' and leftMoved != 'null')):
                                 confirmLeftClick += 1
 
                                 # Confirmar clique com o botão esquerdo
