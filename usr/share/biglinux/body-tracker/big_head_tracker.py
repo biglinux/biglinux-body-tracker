@@ -1,3 +1,4 @@
+import subprocess
 import mediapipe as mp  # para capturar informações do rosto / to capture info about face
 from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
 import numpy as np  # para realizar cálculos / to make calculations
@@ -312,35 +313,45 @@ def tkTooltipOnlyColor(color, bg, mouseX, mouseY, tooltipWidth, tooltipHeight):
 def make_action(action):
     if action == 'pressLeft':
         mouse.press(Button.left)
+
     elif action == 'releaseLeft':
         mouse.release(Button.left)
         globals()['waitFrames'] = int(fpsRealMean / 6)
+
     elif action == 'pressRight':
         mouse.press(Button.right)
+
     elif action == 'releaseRight':
         mouse.release(Button.right)
         globals()['waitFrames'] = int(fpsRealMean / 2)
+
     elif action == 'clickLeft':
         mouse.press(Button.left)
         mouse.release(Button.left)
         globals()['waitFrames'] = int(fpsRealMean / 2)
+
     elif action == 'clickRight':
         mouse.press(Button.right)
         mouse.release(Button.right)
         globals()['waitFrames'] = int(fpsRealMean / 2)
-    elif action == 'scrollV':
-        globals()['stopCursor'] = True
-        print(f"mousepoint {mousePointYabs}")
-        print(f"args.minimalMouseMoveY {args.minimalMouseMoveY}")
-        scrollValueX = 5
-        if scrollValueX < 1 and scrollValueX > 0:
-            scrollValueX = 1
-        elif scrollValueX > -1 and scrollValueX < 0:
-            scrollValueX = -1
-        mouse.scroll(0, - scrollValueX)
-        globals()['slowMove'] = 10 + (fpsRealMean / 10)
+
     elif action == 'enableCursor':
         globals()['stopCursor'] = False
+        globals()['action'] = ''
+
+    elif action == 'scrollV':
+        if globals()['action'] == 'scrollV':
+            globals()['stopCursor'] = False
+            globals()['action'] = ''
+            globals()['waitFrames'] = int(fpsRealMean / 2)
+        else:
+            globals()['stopCursor'] = True
+            globals()['action'] = 'scrollV'
+            globals()['waitFrames'] = int(fpsRealMean / 2)
+    elif action == 'toggleKeyboard':
+        subprocess.run(["qdbus", "org.onboard.Onboard", "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.ToggleVisible"])
+
+
 
 
 #####################
@@ -357,9 +368,17 @@ def calculate_distance2D(var_name, top_indices, bottom_indices):
     distance_x = np.sum(np.sum(bottom_pointsX + 2) - np.sum(top_pointsX + 2))
     distance_y = np.sum(np.sum(bottom_pointsY + 2) - np.sum(top_pointsY + 2))
     if var_name == 'kiss':
-        distance = np.sum(distance_x + distance_y) * 500 / globals()['irisDistance'] - 1
+        distance = (np.sum(distance_x + distance_y) / globals()['irisDistance'] - 1) * 10
+    elif var_name == 'leftEye':
+        distance = (np.sum(distance_x + distance_y) * 3 / globals()['overLeftEye']) * 10
+        print(f"Distance: {distance}")
+    elif var_name == 'rightEye':
+        distance = (np.sum(distance_x + distance_y) * 3 / globals()['overRightEye']) * 10
+        print(f"Distance: {distance}")
+
+
     else:
-        distance = np.sum(distance_x + distance_y) * 500
+        distance = np.sum(distance_x + distance_y)
     # Save the distance in a global variable
     globals()[var_name] = distance
     # Save the running average of the distance in a global variable
@@ -379,6 +398,7 @@ async def verify_false_click(var_name, distance_value, confirm_value, action_sta
 
     var_name_confirmation = globals()[var_name + 'Confirmation']
     distance = globals()[var_name]
+
     if globals()['confirmationTimeout'] == 0 and not globals()['clicked']:
         globals()[var_name + 'Old'] = (globals()[var_name + 'Old'] * fpsRealMean / 2 + distance) / (fpsRealMean  / 2 + 1)
         # print(globals()[var_name + 'Old'])
@@ -388,26 +408,27 @@ async def verify_false_click(var_name, distance_value, confirm_value, action_sta
     var_name_old = globals()[var_name + 'Old']
     var_name_normalized = globals()[var_name + 'Normalized']
     # print(var_name_mean, var_name_old * distance_value)
+
     if not globals()[var_name + 'Clicked'] and not globals()['clicked'] and eyesOpen >= 3 and waitFrames == 0:
         if eyesOpen and distance < var_name_old * distance_value and not standByClick and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (rightMoved != 'no' and rightMoved != 'null') or (leftMoved != 'no' and leftMoved != 'null')):
             globals()[var_name + 'Confirmation'] += 1
             globals()['confirmationTimeout'] = int(fpsRealMean / 3) + confirm_value
             var_name_confirmation += 1
-            if ((var_name_confirmation >= int(fpsRealMean / 10) + confirm_value and eyesOpen == 10) or (var_name_confirmation >= int(fpsRealMean / 6) + confirm_value and eyesOpen == 5) or (var_name_confirmation >= int(fpsRealMean / 3) + confirm_value and eyesOpen == 3)) and not globals()['clicked']:
-                # print( var_name + ' fechou')
+            if ((var_name_confirmation >= int(fpsRealMean / 10) + confirm_value and eyesOpen == 10) or (var_name_confirmation >= int(fpsRealMean / 7) + confirm_value and eyesOpen == 5) or (var_name_confirmation >= int(fpsRealMean / 4) + confirm_value and eyesOpen == 3)) and not globals()['clicked']:
                 if action_start != 'wait':
                     make_action(action_start)
                 globals()['clicked'] = True
                 globals()[var_name + 'Clicked'] = True
         else:
             globals()[var_name + 'Confirmation'] = 1
+
     if globals()[var_name + 'Clicked']:
         if var_name_mean > var_name_old * distance_value and distance > var_name_old * distance_value:
             globals()[var_name + 'Confirmation'] = 1
             globals()[var_name + 'Clicked'] = False
             globals()['clicked'] = False
-            # print(var_name + ' abriu')
             make_action(action_end)
+
     if eyesOpen == 0:
         globals()[var_name + 'Confirmation'] = 1
 
@@ -416,22 +437,19 @@ async def main():
     # chame a função verify_false_click dentro de uma tarefa assíncrona usando asyncio.create_task
     if args.rightEye:
         # var_name, distance_value, confirm_value, action_start, action_end
-        await asyncio.create_task(verify_false_click('rightEye', 0.7, 3, 'pressRight', 'releaseRight'))
+        await asyncio.create_task(verify_false_click('rightEye', 0.7, 0, 'pressRight', 'releaseRight'))
 
     if args.enableLeftEye:
         # var_name, distance_value, confirm_value, action_start, action_end
-        await asyncio.create_task(verify_false_click('leftEye', 0.7, 1, 'pressLeft', 'releaseLeft'))
+        await asyncio.create_task(verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft'))
 
     if args.enableKiss:
         # var_name, distance_value, confirm_value, action_start, action_end
-        await asyncio.create_task(verify_false_click('kiss', 0.7, 1, 'scrollV', 'enableCursor'))
+        await asyncio.create_task(verify_false_click('kiss', 0.7, 0, 'toggleKeyboard', 'wait'))
 
 
     # await asyncio.sleep(0.5)
     # print(f"arg {args.startIsNeutral}")
-
-
-
 
 
 #####################
@@ -460,7 +478,6 @@ def calculate_distance3D(var_name, top_indices, bottom_indices, distance_value, 
         globals()[var_name + 'Mean'] = distance
         globals()[var_name + 'Normalized'] = distance
         globals()[var_name + 'Old'] = distance
-
 
 
 #####################
@@ -524,6 +541,14 @@ mouse.position = ((tkTooltip.winfo_screenwidth() / 2), (tkTooltip.winfo_screenhe
 # Inicializar variáveis
 # Init variables
 ######################
+overLeftEye = 0
+overRightEye = 0
+action = ''
+mousePointYabsOld = 0
+mousePointXabsOld = 0
+leftEyeBlinkOld = 0
+leftEyeBlink = 0
+rightEyeBlink = 0
 irisDistance = 1
 kiss = 1
 confirmationTimeout = 0
@@ -917,6 +942,7 @@ with mp_face_mesh.FaceMesh(
                         # Calculate using 2D information about 3 top points and 3 bottom points of the eyes, the function will generate 4 global variables
                         # The values passed are, variable name, top points, bottom points, distance between points to consider closed
                         # RightEye rightEyeOld rightEyeNomalized  rightEyeMean
+                        calculate_distance2D('overRightEye', [258], [252])
                         calculate_distance2D('rightEye', [385, 386, 387], [373, 374, 380])
 
                     if args.enableLeftEye:
@@ -925,6 +951,7 @@ with mp_face_mesh.FaceMesh(
                         # Calculate using 2D information about 3 top points and 3 bottom points of the eyes, the function will generate 4 global variables
                         # The values passed are, variable name, top points, bottom points, distance between points to consider closed
                         # leftEye leftEyeOld leftEyeNomalized  leftEyeMean
+                        calculate_distance2D('overLeftEye', [28], [22])
                         calculate_distance2D('leftEye', [158, 159, 160], [163, 145, 144])
 
 
@@ -936,12 +963,11 @@ with mp_face_mesh.FaceMesh(
                         # The values passed are, variable name, top points, bottom points, distance between points to consider closed
                         # RightEye rightEyeOld rightEyeNomalized  rightEyeMean
                         calculate_distance2D('irisDistance', [469], [476])
-
                         calculate_distance2D('kiss', [178, 80, 41], [318, 415, 272])
 
 
 
-                    if (leftEye < leftEyeMean * 0.75 and rightEye < rightEyeMean * 0.7) or (leftEye < leftEyeNormalized * 0.4 and rightEye < rightEyeNormalized * 0.4) and not clicked:
+                    if (leftEye < leftEyeMean * 0.75 and rightEye < rightEyeMean * 0.75) or (leftEye < leftEyeNormalized * 0.4 and rightEye < rightEyeNormalized * 0.4) and not clicked:
                         eyesOpen = 0
                         waitFrames = int(fpsRealMean / 4)
                     else:
@@ -953,13 +979,28 @@ with mp_face_mesh.FaceMesh(
                             eyesOpen = 10
                         else: eyesOpen = 5
 
-                    if leftEye < leftEyeNormalized * 0.7 and rightEye < rightEyeNormalized * 0.7 and not clicked:
+                    if (leftEye < leftEyeNormalized * 0.7 and rightEye < rightEyeNormalized * 0.7 and not clicked) or (mousePointYabsOld > mousePointYabs and not clicked) or (mousePointXabsOld > mousePointXabs and not clicked):
                         eyesOpen = 3
 
 
                     # chame a função principal usando asyncio.run
                     asyncio.run(main())
 
+ 
+                    if action == 'scrollV' and mousePointYabs > args.minimalMouseMoveY:
+                        globals()['stopCursor'] = True
+                        print(f"mousepoint {mousePointYabs}")
+                        print(f"args.minimalMouseMoveY {args.minimalMouseMoveY}")
+                        # scrollValueX = 5
+                        scrollValueX = mousePointYApply / (fpsRealMean / 2)
+                        if scrollValueX < 1 and scrollValueX > 0:
+                            scrollValueX = 1
+                        elif scrollValueX > -1 and scrollValueX < 0:
+                            scrollValueX = -1
+                        mouse.scroll(0, - scrollValueX)
+                        globals()['slowMove'] = 10 + (fpsRealMean / 10)
+ 
+ 
                     # print(f"waitFrames: {waitFrames}")
                     # print(f"eyesOpen: {eyesOpen}")
                     # print(f"leftEye: {leftEye}")
@@ -1375,6 +1416,9 @@ with mp_face_mesh.FaceMesh(
                     #         mouse.scroll(0, - scrollValueX)
                     #         slowMove = 10 + (fpsRealMean / 10)
                     #         # print(mousePointYApply)
+
+
+
 
                     #     ####################
                     #     # Modo de rolagem horizontal
