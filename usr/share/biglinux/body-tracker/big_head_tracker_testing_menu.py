@@ -297,6 +297,123 @@ def tkTooltipChangeCenter(text, color, bg):
     tkTooltip.update()
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####################
+tkTooltip = tk.Tk()
+
+# Exibir texto usando tk / Show text using tk
+def tkTooltipChange(text, color, bg, mouseX, mouseY):
+    # Criar a janela da tooltip se ainda não foi criada
+    # Create the tooltip window if it hasn't been created yet
+    global tkTooltip
+    if not tkTooltip:
+        tkTooltip = tk.Toplevel()
+        tkTooltip.transient(root) # Tornar a janela de tooltip "filha" da janela principal / Make the tooltip window a "child" of the main window
+    
+    # Desabilitar a borda da janela / Disable window border
+    tkTooltip.wm_overrideredirect(True)
+
+
+
+
+
+# Circular menu
+def create_tooltip(text, x, y):
+    tooltip = tk.Tk()
+    tooltip.wm_overrideredirect(True)
+    
+    tooltip.wm_geometry(f"+{x}+{y}")
+
+    label = tk.Label(tooltip, text=text, font=("Arial", 12), bg="white", borderwidth=2, relief="solid")
+    label.pack()
+
+    return tooltip, label
+
+def circular_menu(event, options, action=None):
+    radius = 100
+    angle = 360 / len(options)
+
+    tooltips = []
+    labels = []
+
+    for i, (display_name, _) in enumerate(options):
+        x = event.x_root + radius * 0.8 * math.sin(math.radians(i * angle))
+        y = event.y_root - radius * 0.8 * math.cos(math.radians(i * angle))
+
+        tooltip, label = create_tooltip(display_name, int(x), int(y))
+        tooltips.append(tooltip)
+        labels.append(label)
+
+    center_tooltip, center_label = create_tooltip("", event.x_root, event.y_root)
+    center_label.config(width=2, height=1)
+    tooltips.append(center_tooltip)
+    labels.append(center_label)
+
+    def on_motion(event):
+        x, y = root.winfo_pointerx(), root.winfo_pointery()
+        distances = [(math.sqrt((x - (tkTooltip.winfo_rootx() + label.winfo_width() // 2)) ** 2 + (y - (tkTooltip.winfo_rooty() + label.winfo_height() // 2)) ** 2), i) for i, (tooltip, label) in enumerate(zip(tooltips, labels))]
+        _, selected_index = min(distances)
+        
+        for i, label in enumerate(labels):
+            if i == selected_index:
+                label.config(bg="blue", fg="white")
+            else:
+                label.config(bg="white", fg="black")
+
+    def on_left_release(event):
+        x, y = root.winfo_pointerx(), root.winfo_pointery()
+        distances = [(math.sqrt((x - (tkTooltip.winfo_rootx() + label.winfo_width() // 2)) ** 2 + (y - (tkTooltip.winfo_rooty() + label.winfo_height() // 2)) ** 2), i) for i, (tooltip, label) in enumerate(zip(tooltips, labels))]
+        _, selected_index = min(distances)
+
+        if selected_index < len(options):
+            display_name, internal_name = options[selected_index]
+            print(f"Opção selecionada: {display_name} ({internal_name})")
+            if action:
+                action(internal_name)
+        else:
+            print("Opção central selecionada")
+
+        for tooltip in tooltips:
+            tooltip.destroy()
+
+    root.bind("<Motion>", on_motion)
+    root.bind("<ButtonRelease-1>", on_left_release)
+
+def sample_action(option):
+    print(f"Ação executada para a opção: {option}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def make_action(action):
     globals()['action'] = action
     if action == 'pressLeft':
@@ -312,15 +429,15 @@ def make_action(action):
         # tkTooltipOnlyColor("#000000", "#00ff00", mouse.position[0] + 30, mouse.position[1] + 30, 20, 20)
         globals()['stopCursor'] = True
 
-        if changeLeftMove and leftMoved == 'right':
-            tkTooltipChange('Duplo Clique', "#000000", "#fff000", mouse.position[0], mouse.position[1])
+        # if changeLeftMove and leftMoved == 'right':
+        # tkTooltipChange('Duplo Clique', "#000000", "#fff000", mouse.position[0], mouse.position[1])
 
 
     elif action == 'releaseOptions1':
         mouse.release(Button.left)
         globals()['waitFrames'] = int(fpsRealMean / 6)
         tkTooltipChange('hide', "#000000", "#00ff00", mouse.position[0], mouse.position[1])
-        # globals()['stopCursor'] = False
+        globals()['stopCursor'] = False
 
 
     elif action == 'pressRight':
@@ -460,7 +577,7 @@ async def main():
 
     if args.enableLeftEye:
         # var_name, distance_value, confirm_value, action_start, action_end
-        await asyncio.create_task(verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft'))
+        await asyncio.create_task(verify_false_click('leftEye', 0.7, 0, 'showOptions1', 'releaseOptions1'))
 
     if args.enableKiss:
         # var_name, distance_value, confirm_value, action_start, action_end
@@ -560,6 +677,7 @@ mouse.position = ((tkTooltip.winfo_screenwidth() / 2), (tkTooltip.winfo_screenhe
 # Inicializar variáveis
 # Init variables
 ######################
+menuOpened = False
 overLeftEye = 0
 overRightEye = 0
 action = ''
@@ -1101,17 +1219,30 @@ with mp_face_mesh.FaceMesh(
                         mouse.scroll(0, - scrollValueX)
                         globals()['slowMove'] = 10 + (fpsRealMean / 10)
                     elif action == 'showOptions1':
-                        if mousePointXApply < - args.minimalMouseMoveX * 3:
-                            tkTooltipChange('Duplo Clique', "#000000", "#ff00ff", mouse.position[0], mouse.position[1])
+                        if not menuOpened:
+                            root = tk.Tk()
+                            options = [
+                                ("Abrir navegador", "browser"),
+                                ("Opção 2", "option2"),
+                                ("Opção 3", "option3"),
+                                ("Opção 4", "option4"),
+                            ]
 
-                        elif mousePointXApply > args.minimalMouseMoveX * 3:
-                            tkTooltipChange('Segurar', "#000000", "#afaaaf", mouse.position[0], mouse.position[1])
 
-                        elif mousePointYApply > args.minimalMouseMoveY * 2:
-                            tkTooltipChange('Botão do Meio', "#000000", "#4440ff", mouse.position[0], mouse.position[1])
+                            root.bind("<ButtonPress-1>", lambda event: circular_menu(event, options, sample_action))
+                            menuOpened = True
+
+                        # if mousePointXApply < - args.minimalMouseMoveX * 3:
+                        #     tkTooltipChange('Duplo Clique', "#000000", "#ff00ff", mouse.position[0], mouse.position[1])
+
+                        # elif mousePointXApply > args.minimalMouseMoveX * 3:
+                        #     tkTooltipChange('Segurar', "#000000", "#afaaaf", mouse.position[0], mouse.position[1])
+
+                        # elif mousePointYApply > args.minimalMouseMoveY * 2:
+                        #     tkTooltipChange('Botão do Meio', "#000000", "#4440ff", mouse.position[0], mouse.position[1])
  
-                        elif mousePointYApply < - args.minimalMouseMoveY * 2:
-                            tkTooltipChange('Exibir Teclado', "#000000", "#626634", mouse.position[0], mouse.position[1])
+                        # elif mousePointYApply < - args.minimalMouseMoveY * 2:
+                        #     tkTooltipChange('Exibir Teclado', "#000000", "#626634", mouse.position[0], mouse.position[1])
 
 
                     # print(f"waitFrames: {waitFrames}")
