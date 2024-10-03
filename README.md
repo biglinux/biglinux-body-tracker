@@ -1,5 +1,5 @@
 # biglinux-body-tracker
-
+ 
 Utilizando o pip
 ```pip install mediapipe pynput tk playsound```
 
