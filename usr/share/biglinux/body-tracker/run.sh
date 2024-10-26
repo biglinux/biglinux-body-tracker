@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd /usr/share/biglinux/body-tracker/
-
 # Active virtual environment
 if [[ -z $VIRTUAL_ENV ]]; then
     source venv/bin/activate
