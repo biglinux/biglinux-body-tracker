@@ -1,18 +1,18 @@
 import subprocess
 import threading
-import asyncio # Importa o módulo asyncio para manipular a variavel tempo / Import the asyncio module to manipulate the time variable
-import time # Importa o módulo time para manipular a variavel tempo / Import the time module to manipulate the time variable
-import os # Importa o módulo os para manipular o sistema operacional / Import the os module to manipulate the operating system
-import sys # Import the sys module to be able to read the first argument passed to the script
-import argparse  # para ler parâmetros do comando do terminal / to read parameters from terminal command
-import configparser # Importa o módulo configparser para manipular o arquivo de configuração / Import the configparser module to manipulate the configuration file
-import math # Importa o módulo math para manipular cálculos matemáticos / Import the math module to manipulate math calculations
-import numpy as np  # para realizar cálculos / to make calculations
-import tkinter as tk  # para exibir dicas de ferramentas / to show tooltip
-from PIL import Image # Importa o módulo Image para manipular a imagem / Import the Image module to manipulate the image
-from pynput.mouse import Button, Controller  # para usar o mouse / to use mouse
-import cv2 # Importa o módulo OpenCV para manipular a imagem / Import the OpenCV module to manipulate the image
-import mediapipe as mp  # para capturar informações do rosto / to capture info about face
+import asyncio
+import time
+import os
+import sys
+import argparse
+import configparser
+import math
+import numpy as np
+import tkinter as tk
+from PIL import Image
+from pynput.mouse import Button, Controller
+import cv2
+import mediapipe as mp
 from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
 
 def read_config(var_name=None, section_name='General', config_file='config.conf', default_value=None):
@@ -59,7 +59,6 @@ def write_config(var_name, var_value, section_name='General', config_file='confi
 
 
 #####################
-# Definir argumentos e suas propriedades para serem usados pelo argparse
 # Define arguments and their properties to be used by argparse
 #####################
 arg_info = {
@@ -173,28 +172,23 @@ arg_info = {
 
 
 ##############################
-# Ler argumentos da linha de comando
 # Read args from command line
 ##############################
 parser = argparse.ArgumentParser()
 
-# Adicionar argumentos ao analisador
 # Add arguments to the parser
 for arg_name, arg_details in arg_info.items():
     parser.add_argument(f'--{arg_name}', type=str, help=arg_details['help'], default=str(arg_details['default']))
 
-# Analisar argumentos fornecidos
 # Parse provided arguments
 args = parser.parse_args()
 
-# Armazenar argumentos fornecidos em uma lista
 # Store provided arguments in a list
 provided_args = []
 for arg in vars(args):
     if f"--{arg}" in sys.argv:
         provided_args.append(arg)
 
-# Função para atualizar os argumentos com base nos argumentos fornecidos e nas configurações
 # Function to update arguments based on provided arguments and settings
 # Read the configuration file and get the value for this argument
 def update_arg(args, arg_name, default_value, provided_args):
@@ -223,7 +217,6 @@ def update_arg(args, arg_name, default_value, provided_args):
     # Set the value of the argument
     setattr(args, arg_name, arg_value)
 
-# Atualizar argumentos usando a função update_arg
 # Update arguments using the update_arg function
 for arg_name, arg_details in arg_info.items():
     update_arg(args, arg_name, arg_details['type'], provided_args)
@@ -241,9 +234,7 @@ if not args.enableRightEye:
     rightEyeNormalized = 1
 
 
-
 ######################
-# Iniciar variáveis
 # Init variables
 ######################
 overLeftEye = 0
@@ -417,7 +408,6 @@ source = WebcamSource(width=args.webcamx, height=args.webcamy, fps=args.fps, cam
 
 
 #####################
-# Função para obter a região dos olhos para detectar brilho (ROI)
 # Function to get the eyes region to detect brightness (ROI)
 #####################
 def get_eyes_roi(frame, landmarks):
@@ -425,7 +415,6 @@ def get_eyes_roi(frame, landmarks):
     left_eye_indices = [224, 193, 128, 229]
     right_eye_indices = [444, 449, 251, 441]
 
-    # Função para obter a ROI de um olho com base nos índices
     # Function to get the ROI of an eye based on the indices
     def get_eye_roi(indices):
         eye_roy_array = []
@@ -439,12 +428,10 @@ def get_eyes_roi(frame, landmarks):
         return frame[eye_roy_array_rect[1]:eye_roy_array_rect[1] + eye_roy_array_rect[3],
                      eye_roy_array_rect[0]:eye_roy_array_rect[0] + eye_roy_array_rect[2]]
 
-    # Obter ROIs para ambos os olhos
     # Get ROIs for both eyes
     left_eye_roi = get_eye_roi(left_eye_indices)
     right_eye_roi = get_eye_roi(right_eye_indices)
 
-    # Retornar a ROI com a menor área
     # Return the ROI with the smallest area
     if left_eye_roi.size < right_eye_roi.size:
         return left_eye_roi
@@ -452,25 +439,22 @@ def get_eyes_roi(frame, landmarks):
         return right_eye_roi
 
 #####################
-# Início do código da dica de ferramenta / Tooltip code start
+# Tooltip code start
 #####################
 import tkinter as tk
 tkTooltip = tk.Tk()
 
-# Exibir texto usando tk / Show text using tk
+# Show text using tk
 async def tkTooltipChange(text, color, bg, mouseX, mouseY):
-    # Criar a janela da tooltip se ainda não foi criada
     # Create the tooltip window if it hasn't been created yet
     global tkTooltip
     if not tkTooltip:
         tkTooltip = tk.Toplevel()
-        tkTooltip.transient(root) # Tornar a janela de tooltip "filha" da janela principal / Make the tooltip window a "child" of the main window
+        tkTooltip.transient(root) # Make the tooltip window a "child" of the main window
     
-    # Desabilitar a borda da janela / Disable window border
+    # Disable window border
     tkTooltip.wm_overrideredirect(True)
 
-
-    # Configurar variáveis para a dica de ferramenta
     # Set up variables for the tooltip
     tooltipText = text
     tooltipTextColor = color
@@ -486,7 +470,6 @@ async def tkTooltipChange(text, color, bg, mouseX, mouseY):
         tooltipWidth = len(text) * tooltipFontSize
         tooltipHeight = tooltipFontSize + 14
 
-    # Definir posição e tamanho da dica de ferramenta
     # Set tooltip position and size
     if mouseX > 300:
         mouseX = mouseX - tooltipWidth - 40
@@ -501,20 +484,16 @@ async def tkTooltipChange(text, color, bg, mouseX, mouseY):
 
     tkTooltip.wm_geometry(f"{tooltipWidth}x{tooltipHeight}+{mouseX}+{mouseY}")
     
-    # Remover o widget Label anterior antes de criar um novo
     # Hide all the children of a widget. It is used
     # when the user wants to hide the tooltip.
     for child in tkTooltip.winfo_children():
         child.destroy()
 
-
-    # Configurar e aplicar fonte e estilo da dica de ferramenta
     # Configure and apply font and style for the tooltip
     l = tk.Label(tkTooltip, font=("Ubuntu Mono", tooltipFontSize))
     l.pack(expand=True)
     l.config(text=tooltipText, fg=tooltipTextColor, bg=tooltipBgColor, width=tooltipWidth, height=tooltipHeight, borderwidth=2, highlightbackground=tooltipTextColor, highlightthickness=2)
-    
-    # Configurar aparência da dica de ferramenta
+
     # Configure tooltip appearance
     tkTooltip.configure(background=bg)
 
@@ -522,9 +501,8 @@ async def tkTooltipChange(text, color, bg, mouseX, mouseY):
     tkTooltip.update()
 
 
-# Exibir texto no centro da tela / Display text in the center of the screen
+# Display text in the center of the screen
 async def tkTooltipChangeCenter(text, color, bg):
-    # Configurar variáveis para a dica de ferramenta
     # Set up variables for the tooltip
     tooltipText = text
     tooltipTextColor = color
@@ -536,7 +514,7 @@ async def tkTooltipChangeCenter(text, color, bg):
     mouseY = int((tkTooltip.winfo_screenheight() / 2) - tooltipHeight / 2)
 
 
-    # Desabilitar a borda da janela / Disable window border
+    # Disable window border
     tkTooltip.wm_overrideredirect(True)
 
     tkTooltip.geometry(
@@ -544,16 +522,14 @@ async def tkTooltipChangeCenter(text, color, bg):
             tkTooltip.winfo_screenwidth(), tkTooltip.winfo_screenheight()
         )
     )
-    # Configurar aparência da dica de ferramenta
     # Configure tooltip appearance
     tkTooltip.configure(background=bg)
 
-    # Configurar e aplicar fonte
     # Configure and apply font
     l = tk.Label(font=("Ubuntu Mono", tooltipFontSize))
     l.pack(expand=True)
     l.config(text=tooltipText, fg=tooltipTextColor, bg=tooltipBgColor, width=tooltipWidth, height=tooltipHeight, borderwidth=2, highlightbackground=color, highlightthickness=2)
-    # Atualizar dica de ferramenta / Update tooltip
+    # Update tooltip
     tkTooltip.update()
 
 # Initialize mouse controller
@@ -706,7 +682,6 @@ def make_action(action):
         subprocess.run(["qdbus", "org.onboard.Onboard", "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.ToggleVisible"])
 
 #####################
-# Função para calcular a distância entre pontos em eixos x e y - 2D
 # Function to calculate the distance between points in axes x and y - 2D
 #####################
 def calculate_distance2D(var_name, top_indices, bottom_indices):
@@ -760,7 +735,6 @@ def calculate_distance2D(var_name, top_indices, bottom_indices):
 
 
 #####################
-# Função para calcular a distância entre pontos em eixos x, y e z - 3D
 # Function to calculate the distance between points in axes x, y, and z - 3D
 #####################
 def calculate_distance3D(var_name, top_indices, bottom_indices, distance_value, confirm_value, action_start, action_end):
@@ -1181,7 +1155,6 @@ with mp_face_mesh.FaceMesh(
                 ##############################
                 if args.view != 0:
                     ##############################
-                    # Exibir informações na tela
                     # Print info on screen
                     ##############################
                     if args.view == 2:
@@ -1193,7 +1166,6 @@ with mp_face_mesh.FaceMesh(
 
                     cv2.rectangle(showInCv, (0, 0), (300, 300), (0, 0, 0), -1)
 
-                    # Exibir texto com informações na tela
                     # Display text with information on the screen
                     cv2.putText(showInCv, f"FPS {int(fpsReal)}", (20, 40),
                                 cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 1)
@@ -1211,18 +1183,15 @@ with mp_face_mesh.FaceMesh(
                                 cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 1)
 
                     if args.view > 0:
-                        # Linha horizontal central
                         # Center horizontal line
                         cv2.line(showInCv, (0, (int(args.webcamy / 2))), (args.webcamx, (int(args.webcamy / 2))), (255, 255, 255), 1)
                         cv2.line(showInCv, (0, (int(args.webcamy / 2) + 1)), (args.webcamx, (int(args.webcamy / 2) + 1)), (0, 0, 0), 1)
 
-                        # Linha vertical central
                         # Center vertical line
                         cv2.line(showInCv, ((int(args.webcamx / 2), 0)), ((int(args.webcamx / 2), args.webcamx)), (255, 255, 255), 1)
                         cv2.line(showInCv, ((int(args.webcamx / 2) + 1, 0)), ((int(args.webcamx / 2) + 1, args.webcamx)), (0, 0, 0), 1)
 
                     ##############################
-                    # Mostrar pontos no avatar
                     # Show points on avatar
                     ##############################
                     if args.view == 2:
@@ -1284,7 +1253,6 @@ with mp_face_mesh.FaceMesh(
                     ##############################
                     # Show webcam
                     ##############################
-                    # Mostra a imagem da câmera com os pontos de referência do rosto
                     mp_drawing.draw_landmarks(
                         image=frame,
                         landmark_list=face_landmarks,
@@ -1299,8 +1267,8 @@ with mp_face_mesh.FaceMesh(
                     ##############################
                     if args.plot == 1:  # Check if the user wants to plot the left eye
                         if countFrames == 10:
-                            import matplotlib.pyplot as plt  # para traçar gráficos / to plot graphics
-                            from collections import deque  # para traçar gráficos / to plot graphics
+                            import matplotlib.pyplot as plt  # to plot graphics
+                            from collections import deque  # to plot graphics
                             pts_plot = deque(maxlen=64)
                             pts_plot.append(leftEye)  # Append the blink value to the list of points to be plotted
                             min_value = -0.003
@@ -1311,8 +1279,8 @@ with mp_face_mesh.FaceMesh(
 
                     elif args.plot == 2:  # Check if the user wants to plot the right eye
                         if countFrames == 10:
-                            import matplotlib.pyplot as plt  # para traçar gráficos / to plot graphics
-                            from collections import deque  # para traçar gráficos / to plot graphics
+                            import matplotlib.pyplot as plt  # to plot graphics
+                            from collections import deque  # to plot graphics
                             pts_plot.append(rightEyeBlink)  # Append the blink value to the list of points to be plotted
                             min_value = -0.003
                             max_value = 0.015
