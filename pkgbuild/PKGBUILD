@@ -39,5 +39,5 @@ package() {
     source venv/bin/activate
     bash pyinstaller_run.sh
     mkdir -p "${pkgdir}/"
-    cp -R /dist/big_head_tracker/ /usr/share/biglinux/body-tracker/
+    cp -R dist/big_head_tracker/ /usr/share/biglinux/body-tracker/
 }
