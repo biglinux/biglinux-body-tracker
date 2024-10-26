@@ -120,9 +120,11 @@ def make_action(action):
         globals()['stopCursor'] = False
 
     elif action == 'pressRight':
+        asyncio.run(tkTooltipChange('', "#000000", "#b6b63d", mouse_position[0], mouse_position[1]))
         mouse.press(Button.right)
 
     elif action == 'releaseRight':
+        asyncio.run(tkTooltipChange('hide', "#000000", "#b6b63d", mouse_position[0], mouse_position[1]))
         mouse.release(Button.right)
         globals()['waitFrames'] = int(fpsRealMean / 2)
 
@@ -515,7 +517,8 @@ with mp_face_mesh.FaceMesh(
                         eyesOpen = 3
 
                 if args.enableRightEye:
-                    verify_false_click('rightEye', 0.7, 0, 'showOptions1', 'releaseOptions1')
+                    # verify_false_click('rightEye', 0.7, 0, 'showOptions1', 'releaseOptions1')
+                    verify_false_click('rightEye', 0.7, 0, 'pressRight', 'releaseRight')
 
                 if args.enableLeftEye:
                     verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft')
