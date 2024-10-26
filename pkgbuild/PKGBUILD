@@ -38,6 +38,6 @@ package() {
     bash install_pip_deps.sh
     source venv/bin/activate
     bash pyinstaller_run.sh
-    mkdir -p "${pkgdir}/"
+    mkdir -p "${pkgdir}/usr/share/biglinux"
     cp -R dist/big_head_tracker/ "${pkgdir}/usr/share/biglinux/body-tracker/"
 }
