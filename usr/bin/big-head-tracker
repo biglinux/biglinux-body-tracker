@@ -1,0 +1,12 @@
+#!/bin/bash
+
+cd /usr/share/biglinux/body-tracker/
+
+# Active virtual environment
+if [[ -z $VIRTUAL_ENV ]] && [[ -e big_head_tracker.py ]]; then
+    source venv/bin/activate
+    exec python big_head_tracker.py $*
+else
+    ./big_head_tracker $*
+fi
+
