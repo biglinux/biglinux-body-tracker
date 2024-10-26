@@ -5,7 +5,7 @@ pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('any')
 license=('GPL')
-depends=('python-mediapipe' 'python-pynput' 'python-playsound' 'tk' 'kdotool' 'xorg-xrandr')
+depends=('tk' 'kdotool' 'xorg-xrandr')
 url="https://github.com/biglinux/biglinux-body-tracker"
 pkgdesc="Use the webcam to control your computer"
 source=("git+https://github.com/biglinux/biglinux-body-tracker.git")
@@ -19,7 +19,6 @@ package() {
         InternalDir="${srcdir}/${pkgname}"
     fi
 
-
     # Copy files
     if [ -d "${InternalDir}/usr" ]; then
         cp -r "${InternalDir}/usr" "${pkgdir}/"
@@ -32,4 +31,12 @@ package() {
     if [ -d "${InternalDir}/opt" ]; then
         cp -r "${InternalDir}/opt" "${pkgdir}/"
     fi
+    
+    # Make package using pyinstaller
+    cd "${InternalDir}/body-tracker"
+    bash install_pip_deps.sh
+    source venv/bin/activate
+    bash pyinstaller_run.sh
+    mkdir -p "${pkgdir}/"
+    cp -R /dist/big_head_tracker/ /usr/share/biglinux/body-tracker/
 }
