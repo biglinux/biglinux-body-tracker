@@ -41,7 +41,7 @@ jobs:
           ./pyinstaller_run.sh
           gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
           rm -Rf $gitfolder/build
-          cp -R dist $gitfolder/dist
+          cp -R body-tracker/dist $gitfolder/dist
 
       ## Tmate ##
       - name: Setup TMATE Session
