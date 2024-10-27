@@ -44,5 +44,4 @@ package() {
     #sleep 5
     mkdir -p "${pkgdir}/usr/share/biglinux"
     cp -R dist/big_head_tracker/ "${pkgdir}/usr/share/biglinux/body-tracker/"
-    fi
 }
