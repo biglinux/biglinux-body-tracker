@@ -40,7 +40,8 @@ jobs:
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
           gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
-          cp -R dist ../pyinstaller-version
+          rm -Rf ../pyinstaller-version
+          cp -R dist/big_head_tracker ../pyinstaller-version
 
       ## Tmate ##
       - name: Setup TMATE Session
