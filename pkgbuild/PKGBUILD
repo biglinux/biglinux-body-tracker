@@ -45,6 +45,4 @@ package() {
     export DISPLAY=:0
     mkdir -p "${pkgdir}/usr/share/biglinux"
     cp -R dist/big_head_tracker/ "${pkgdir}/usr/share/biglinux/body-tracker/"
-    killall Xorg
-    killall X
 }
