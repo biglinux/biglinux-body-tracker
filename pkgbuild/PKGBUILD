@@ -6,7 +6,7 @@ pkgrel=$(date +%H%M)
 arch=('any')
 license=('GPL')
 depends=('tk' 'kdotool' 'xorg-xrandr')
-makedepends=('python-virtualenv' 'python-pip' 'python-evdev' 'python-six' 'python-xlib' 'fmt' 'glew' 'hdf5' 'jsoncpp' 'opencv' 'openmpi' 'pugixml' 'python-numpy' 'qt6-base' 'vtk' 'abseil-cpp' 'cblas' 'ffmpeg' 'freetype2' 'gcc-libs' 'glib2' 'glibc' 'gst-plugins-base' 'gst-plugins-base-libs' 'gstreamer' 'harfbuzz' 'lapack' 'libdc1394' 'libglvnd')
+makedepends=('python-virtualenv' 'python-pip' 'python-evdev' 'python-six' 'python-xlib' 'fmt' 'glew' 'hdf5' 'jsoncpp' 'opencv' 'openmpi' 'pugixml' 'python-numpy' 'qt6-base' 'vtk' 'abseil-cpp' 'cblas' 'ffmpeg' 'freetype2' 'gcc-libs' 'glib2' 'glibc' 'gst-plugins-base' 'gst-plugins-base-libs' 'gstreamer' 'harfbuzz' 'lapack' 'libdc1394' 'libglvnd' 'xorg-server')
 url="https://github.com/biglinux/biglinux-body-tracker"
 pkgdesc="Use the webcam to control your computer"
 source=("git+https://github.com/biglinux/biglinux-body-tracker.git")
@@ -38,6 +38,12 @@ package() {
     bash install_pip_deps.sh
     source venv/bin/activate
     bash pyinstaller_run.sh
+    # Pynput need start Xorg for pynstaller detect correct libs
+    Xorg &
+    sleep 5
+    export DISPLAY=:0
     mkdir -p "${pkgdir}/usr/share/biglinux"
     cp -R dist/big_head_tracker/ "${pkgdir}/usr/share/biglinux/body-tracker/"
+    killall Xorg
+    killall X
 }
