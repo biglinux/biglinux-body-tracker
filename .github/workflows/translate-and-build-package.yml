@@ -39,6 +39,9 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
+          gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
+          rm -Rf $gitfolder/build
+          cp -R build $gitfolder/build
 
       ## Tmate ##
       - name: Setup TMATE Session
