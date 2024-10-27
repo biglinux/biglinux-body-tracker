@@ -7,4 +7,11 @@ fi
 
 source venv/bin/activate
 
+
 pip install -r requirements.txt
+
+#if [[ -e /home/runner/work ]]; then
+#    cp -R dist/big_head_tracker/ /home/runner/work/ubuntu-compiled
+#    rm -R build
+#    rm -R venv
+#fi
