@@ -13,16 +13,16 @@ sleep 5
 
 pyinstaller --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
 
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" != "" ]]; then
-    pyinstaller --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
+if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
+    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
 fi
 
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" != "" ]]; then
-    pyinstaller --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
+if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
+    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
 fi
 
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" != "" ]]; then
-    pyinstaller --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
+if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
+    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
 fi
 
 if [[ -e /home/runner/work ]]; then
