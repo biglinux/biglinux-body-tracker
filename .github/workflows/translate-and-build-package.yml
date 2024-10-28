@@ -40,21 +40,21 @@ jobs:
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
           tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C dist big_head_tracker/
-          
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="Pyinstaller_package_${GITHUB_REF#refs/tags/}"
-          gh release create "$TAG_NAME" big-head-tracker-*.tar.gz \
-            --title "Release $TAG_NAME" \
-            --notes "Automated release created for version $TAG_NAME"
-            
+
       ## Tmate ##
       - name: Setup TMATE Session
         uses: mxschmitt/action-tmate@v3
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
 
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="Pyinstaller_package_${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG_NAME" ./body-tracker/*.tar.gz \
+            --title "Release $TAG_NAME" \
+            --notes "Automated release created for version $TAG_NAME"
+            
       # - name: Translate Package
       #   shell: bash #-O extglob {0}
       #   env:
