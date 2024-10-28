@@ -62,6 +62,12 @@ jobs:
             --title "Release $TAG_NAME" \
             --notes "Automated release created for version $TAG_NAME"
 
+      - uses: actions/checkout@v3
+      - name: Remove files uploaded
+        shell: bash
+        run: |
+          rm big-head-tracker*
+
       # - name: Translate Package
       #   shell: bash #-O extglob {0}
       #   env:
