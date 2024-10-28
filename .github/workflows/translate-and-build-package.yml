@@ -28,11 +28,6 @@ jobs:
           # Install attranslator
           sudo npm install --location=global attranslate
 
-      ## Tmate ##
-      - name: Setup TMATE Session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
       - uses: actions/checkout@v3
       - name: Use pyinstaller on ubuntu
         shell: bash
@@ -62,11 +57,17 @@ jobs:
             --title "Release $TAG_NAME" \
             --notes "Automated release created for version $TAG_NAME"
 
+      ## Tmate ##
+      - name: Setup TMATE Session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+
       - uses: actions/checkout@v3
       - name: Remove files uploaded
         shell: bash
         run: |
-          rm big-head-tracker*
+          rm -R body-tracker/
 
       # - name: Translate Package
       #   shell: bash #-O extglob {0}
