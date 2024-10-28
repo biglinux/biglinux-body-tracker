@@ -48,6 +48,7 @@ jobs:
           tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C dist big_head_tracker/
           rm -R dist
           # Make in one file like portable mode
+          ./install_pip_deps.sh
           ./pyinstaller_run.sh -F
           mv dist/big_head_tracker big-head-tracker.run
           rm -R dist
