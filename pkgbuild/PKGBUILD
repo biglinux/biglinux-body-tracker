@@ -6,42 +6,14 @@ pkgrel=$(date +%H%M)
 arch=('any')
 license=('GPL')
 depends=('tk' 'kdotool' 'xorg-xrandr')
-makedepends=('python-virtualenv' 'python-pip' 'python-evdev' 'python-six' 'python-xlib' 'fmt' 'glew' 'hdf5' 'jsoncpp' 'opencv' 'openmpi' 'pugixml' 'python-numpy' 'qt6-base' 'vtk' 'abseil-cpp' 'cblas' 'ffmpeg' 'freetype2' 'gcc-libs' 'glib2' 'glibc' 'gst-plugins-base' 'gst-plugins-base-libs' 'gstreamer' 'harfbuzz' 'lapack' 'libdc1394' 'libglvnd' 'xorg-server' 'xorg-server-xvfb')
 url="https://github.com/biglinux/biglinux-body-tracker"
 pkgdesc="Use the webcam to control your computer"
-source=("git+https://github.com/biglinux/biglinux-body-tracker.git")
-md5sums=(SKIP)
+# Use latest release as source
+source=("$(curl -s https://api.github.com/repos/biglinux/biglinux-body-tracker/releases/latest | grep 'browser_download_url.*.tar.gz' | sed 's|.*: "||g;s|"||g')")
+md5sums=('SKIP')
 
 package() {
-    # Verify default folder
-    if [ -d "${srcdir}/${pkgname}/${pkgname}" ]; then
-        InternalDir="${srcdir}/${pkgname}/${pkgname}"
-    else
-        InternalDir="${srcdir}/${pkgname}"
-    fi
-
-    # Copy files
-    if [ -d "${InternalDir}/usr" ]; then
-        cp -r "${InternalDir}/usr" "${pkgdir}/"
-    fi
-
-    if [ -d "${InternalDir}/etc" ]; then
-        cp -r "${InternalDir}/etc" "${pkgdir}/"
-    fi
-
-    if [ -d "${InternalDir}/opt" ]; then
-        cp -r "${InternalDir}/opt" "${pkgdir}/"
-    fi
-    
     # Make package using pyinstaller
-    cd "${InternalDir}/body-tracker"
-    #bash install_pip_deps.sh
-    #source venv/bin/activate
-    #bash pyinstaller_run.sh
-    # Pynput need start Xorg with Xvfb for pynstaller detect correct libs
-    #export DISPLAY=:99
-    #sudo Xvfb -ac :99 -screen 0 800x600x24 > /dev/null 2>&1 &
-    #sleep 5
     mkdir -p "${pkgdir}/usr/share/biglinux"
-    cp -R dist/big_head_tracker/ "${pkgdir}/usr/share/biglinux/body-tracker/"
+    cp -R "big_head_tracker" "${pkgdir}/usr/share/biglinux/body-tracker/"
 }
