@@ -39,12 +39,22 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
+          tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C body-tracker/dist big_head_tracker/
           
       - uses: actions/upload-artifact@v4
         with:
-            name: Upload Pyinstaller Package
+            name: body-tracker-pyinstaller
             path: body-tracker/dist/big_head_tracker/
 
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="Pyinstaller package ${GITHUB_REF#refs/tags/}"
+          gh release create $TAG_NAME body-tracker/big-head-tracker-*.tar.gz \
+            --title "Release $TAG_NAME" \
+            --notes "Automated release created for version $TAG_NAME"
+            
       ## Tmate ##
       - name: Setup TMATE Session
         uses: mxschmitt/action-tmate@v3
