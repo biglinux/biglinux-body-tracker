@@ -50,8 +50,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="Pyinstaller package ${GITHUB_REF#refs/tags/}"
-          gh release create $TAG_NAME big-head-tracker-*.tar.gz \
+          TAG_NAME="Pyinstaller_package_${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG_NAME" big-head-tracker-*.tar.gz \
             --title "Release $TAG_NAME" \
             --notes "Automated release created for version $TAG_NAME"
             
