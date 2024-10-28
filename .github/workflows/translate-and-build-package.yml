@@ -39,9 +39,11 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
-          gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
-          rm -Rf ../pyinstaller-version
-          cp -R dist/big_head_tracker ../pyinstaller-version
+          
+        - uses: actions/upload-artifact@v4
+        with:
+            name: Upload Pyinstaller Package
+            path: body-tracker/dist/big_head_tracker/ # or path/to/artifact
 
       ## Tmate ##
       - name: Setup TMATE Session
