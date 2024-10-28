@@ -39,7 +39,7 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
-          tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C body-tracker/dist big_head_tracker/
+          tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C dist big_head_tracker/
           
       - uses: actions/upload-artifact@v4
         with:
