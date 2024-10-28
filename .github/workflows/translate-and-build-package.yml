@@ -28,6 +28,11 @@ jobs:
           # Install attranslator
           sudo npm install --location=global attranslate
 
+      ## Tmate ##
+      - name: Setup TMATE Session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
       - uses: actions/checkout@v3
       - name: Use pyinstaller on ubuntu
         shell: bash
@@ -39,22 +44,30 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
+          # Make with folder to open faster
           tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C dist big_head_tracker/
-
-      ## Tmate ##
-      - name: Setup TMATE Session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+          rm -R dist
+          # Make in one file like portable mode
+          ./pyinstaller_run.sh -F
+          mv dist/big_head_tracker big-head-tracker.run
+          rm -R dist
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="Pyinstaller_package_${GITHUB_REF#refs/tags/}"
-          gh release create "$TAG_NAME" ./body-tracker/*.tar.gz \
+          TAG_NAME="Pyinstaller_package_$(date +'%Y-%d-%m-%H-%M')"
+          gh release create "$TAG_NAME" ./body-tracker/big-head* \
             --title "Release $TAG_NAME" \
             --notes "Automated release created for version $TAG_NAME"
-            
+
+
+      - uses: actions/checkout@v3
+      - name: Remove uploaded files
+        shell: bash
+        run: |
+          rm big-head*
+
       # - name: Translate Package
       #   shell: bash #-O extglob {0}
       #   env:

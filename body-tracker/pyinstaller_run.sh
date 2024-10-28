@@ -16,8 +16,6 @@ fi
 
 pyinstaller -y --collect-data mediapipe big_head_tracker.py
 
-#cp -f /usr/lib/x86_64-linux-gnu/libpython*.so dist/big_head_tracker/_internal/
-
 # Only in github actions
 if [[ -e /home/runner/work ]]; then
     rm -R build
