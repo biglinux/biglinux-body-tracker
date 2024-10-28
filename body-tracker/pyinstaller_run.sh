@@ -13,17 +13,9 @@ sleep 5
 
 pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
 
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
-    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
-fi
+#cp -f "$(readlink -f /usr/lib/x86_64-linux-gnu/libpython*.so)" dist/big_head_tracker/_internal/
 
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
-    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
-fi
-
-if [[ "$(ls -1 dist/big_head_tracker/_internal/libpython*)" = "" ]]; then
-    pyinstaller -y --collect-all lib-dynload --collect-data mediapipe big_head_tracker.py
-fi
+cp -f /usr/lib/x86_64-linux-gnu/libpython*.so dist/big_head_tracker/_internal/
 
 if [[ -e /home/runner/work ]]; then
     rm -R build
