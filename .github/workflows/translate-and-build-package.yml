@@ -28,6 +28,46 @@ jobs:
           # Install attranslator
           sudo npm install --location=global attranslate
 
+      ## Tmate ##
+      - name: Setup TMATE Session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+
+      - name: Translate Package
+        shell: bash #-O extglob {0}
+        env:
+          AZURE_KEY: ${{ secrets.AZURE_KEY }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+        run: |
+          cd ..
+          git clone https://github.com/biglinux/big-auto-translator.git
+          mv big-auto-translator/gettext_po_generator_github.sh .
+          sudo cp -f big-auto-translator/openai-translate.js /usr/local/lib/node_modules/attranslate/dist/services/openai-translate.js
+          gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
+          bash gettext_po_generator_github.sh $gitfolder
+
+      # - name: DeepL Translate Github Action
+      #   uses: lyqht/deepl-translate-github-action@v2.1.0
+      #   with:
+      #     target_languages: fr,ja,pt-BR
+      #     input_file_path: locale/en.json
+      #     output_file_name_pattern: deepl/{language}.json
+      #     deepl_api_key: ${{ secrets.DEEPL_API_KEY }}
+
+      - name: Update github
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add --all
+          if [ -n "$(git commit -m "translate $(date +%y-%m-%d_%H:%M)" -a | grep "nothing to commit")" ];then exit 0; fi
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          
       - uses: actions/checkout@v3
       - name: Use pyinstaller on ubuntu
         shell: bash
@@ -56,52 +96,6 @@ jobs:
           gh release create "$TAG_NAME" ./body-tracker/big-head* \
             --title "Release $TAG_NAME" \
             --notes "Automated release created for version $TAG_NAME"
-
-      ## Tmate ##
-      - name: Setup TMATE Session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-
-
-      - uses: actions/checkout@v3
-      - name: Remove files uploaded
-        shell: bash
-        run: |
-          rm biglinux-body-tracker/body-tracker/big-head-tracker.run biglinux-body-tracker/body-tracker/big-head-tracker-*.tar.gz
-
-      # - name: Translate Package
-      #   shell: bash #-O extglob {0}
-      #   env:
-      #     AZURE_KEY: ${{ secrets.AZURE_KEY }}
-      #     OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-      #   run: |
-      #     cd ..
-      #     git clone https://github.com/biglinux/big-auto-translator.git
-      #     mv big-auto-translator/gettext_po_generator_github.sh .
-      #     sudo cp -f big-auto-translator/openai-translate.js /usr/local/lib/node_modules/attranslate/dist/services/openai-translate.js
-      #     gitfolder=$(echo ${{ github.repository }} | rev | cut -d "/" -f1 | rev)
-      #     bash gettext_po_generator_github.sh $gitfolder
-
-      # - name: DeepL Translate Github Action
-      #   uses: lyqht/deepl-translate-github-action@v2.1.0
-      #   with:
-      #     target_languages: fr,ja,pt-BR
-      #     input_file_path: locale/en.json
-      #     output_file_name_pattern: deepl/{language}.json
-      #     deepl_api_key: ${{ secrets.DEEPL_API_KEY }}
-
-      - name: Update github
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add --all
-          if [ -n "$(git commit -m "translate $(date +%y-%m-%d_%H:%M)" -a | grep "nothing to commit")" ];then exit 0; fi
-
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
 
       - name: Send Hooks BigLinux Build Package
         shell: bash
