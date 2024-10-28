@@ -67,7 +67,7 @@ jobs:
       - name: Remove files uploaded
         shell: bash
         run: |
-          rm -R body-tracker/
+          rm body-tracker/big-head-tracker*
 
       # - name: Translate Package
       #   shell: bash #-O extglob {0}
