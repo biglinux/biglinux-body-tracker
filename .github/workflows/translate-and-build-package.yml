@@ -28,8 +28,8 @@ jobs:
           # Install attranslator
           sudo npm install --location=global attranslate
 
-      - name: Use pyinstaller on ubuntu
       - uses: actions/checkout@v3
+      - name: Use pyinstaller on ubuntu
         shell: bash
         run: |
           sudo apt-get update
@@ -40,10 +40,10 @@ jobs:
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
           
-        - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
             name: Upload Pyinstaller Package
-            path: body-tracker/dist/big_head_tracker/ # or path/to/artifact
+            path: body-tracker/dist/big_head_tracker/
 
       ## Tmate ##
       - name: Setup TMATE Session
