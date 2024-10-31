@@ -14,7 +14,7 @@ if [[ -e /home/runner/work ]]; then
     sleep 5 
 fi
 
-pyinstaller -y --collect-data mediapipe $1 big_head_tracker.py
+pyinstaller -y --add-data icon.png:. --add-data icon.svg:. --collect-data mediapipe $1 big_head_tracker.py
 
 # Only in github actions
 if [[ -e /home/runner/work ]]; then
