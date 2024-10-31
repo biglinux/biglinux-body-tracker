@@ -14,6 +14,7 @@ md5sums=('SKIP')
 
 package() {
     # Make package using pyinstaller
+    cp -R "big_head_tracker/usr" "${pkgdir}/usr"
     mkdir -p "${pkgdir}/usr/share/biglinux"
     cp -R "big_head_tracker" "${pkgdir}/usr/share/biglinux/body-tracker/"
 }
