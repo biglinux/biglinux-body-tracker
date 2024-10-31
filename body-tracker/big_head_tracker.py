@@ -1375,7 +1375,7 @@ def mediapipe_processing():
 app_qt = QApplication(sys.argv)
 
 # Load an icon image (ensure 'icon.svg' exists in your working directory)
-icon_path = "icon.svg"  # Replace with your icon path
+icon_path = "icon.png"  # Replace with your icon path
 if not os.path.exists(icon_path):
     # Create a simple red square as a placeholder if the icon does not exist
     placeholder = Image.new('RGB', (64, 64), color = 'red')
