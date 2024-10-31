@@ -1,7 +1,7 @@
 [Desktop Entry]
-Categories=Settings;
-Exec=biglinux-body-tracker --view 1
-Icon=biglinux-body-tracker
+Categories=System;
+Exec=biglinux-body-tracker
+Icon=big-head-tracker.svg
 Name=Big Head Tracker
 StartupNotify=true
 Terminal=false
