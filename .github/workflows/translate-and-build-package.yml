@@ -79,6 +79,8 @@ jobs:
           cd body-tracker
           ./install_pip_deps.sh
           ./pyinstaller_run.sh
+          # Copy files in usr folder for add icon in system menu
+          cp -Rf ../usr dist/big_head_tracker/usr
           # Make with folder to open faster
           tar -czvf big-head-tracker-$(date +'%Y-%d-%m-%H-%M').tar.gz -C dist big_head_tracker/
           rm -R dist
