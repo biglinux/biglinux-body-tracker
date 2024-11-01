@@ -288,6 +288,7 @@ oldframeTime = 0
 fpsRealMean = args.fps
 gain = 400
 fpsBrightness = 0
+scrollValueAccumulatedX = 0
 
 # Video Source Classes
 class VideoSource:
@@ -492,9 +493,6 @@ def tkinter_tooltip_main():
 tkinter_thread = threading.Thread(target=tkinter_tooltip_main, daemon=True)
 tkinter_thread.start()
 
-
-
-
 #####################
 # Mouse Control Functions
 #####################
@@ -531,6 +529,9 @@ screen_width, screen_height = get_screen_size()
 
 # Move mouse to the center of the screen
 mouse.position = (screen_width / 2, screen_height / 2)
+
+# Show message about ready to use
+show_tooltip('Program started', "#000000", "#00b600", screen_width / 2, screen_height / 2)
 
 # Global variables to store the last known mouse position
 last_known_x = None
@@ -596,11 +597,11 @@ def make_action(action_type):
     action = action_type
     mouse_position = get_mouse_position()
     
-    if action_type == 'pressLeft':
+    if action_type == 'pressLeft' and not globals()['stopCursor']:
         show_tooltip('', "#000000", "#00b600", mouse_position[0], mouse_position[1])
         mouse.press(Button.left)
 
-    elif action_type == 'releaseLeft':
+    elif action_type == 'releaseLeft' and not globals()['stopCursor']:
         mouse.release(Button.left)
         show_tooltip('hide', "#000000", "#00b600", mouse_position[0], mouse_position[1])
         globals()['waitFrames'] = int(fpsRealMean / 6)
@@ -613,11 +614,11 @@ def make_action(action_type):
         show_tooltip('hide', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
         globals()['stopCursor'] = False
 
-    elif action_type == 'pressRight':
+    elif action_type == 'pressRight' and not globals()['stopCursor']:
         show_tooltip('', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
         mouse.press(Button.right)
 
-    elif action_type == 'releaseRight':
+    elif action_type == 'releaseRight' and not globals()['stopCursor']:
         show_tooltip('hide', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
         mouse.release(Button.right)
         globals()['waitFrames'] = int(fpsRealMean / 2)
@@ -634,14 +635,18 @@ def make_action(action_type):
 
     elif action_type == 'enableCursor':
         globals()['stopCursor'] = False
-        globals()['action'] = ''
 
-    elif action_type == 'scrollV':
-        if globals()['action'] == 'scrollV':
+    elif action_type == 'pressScrollV':
+        show_tooltip('', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
+        # globals()['waitFrames'] = int(fpsRealMean / 2)
+    elif action_type == 'releaseScrollV':
+        if globals()['stopCursor']:
             globals()['stopCursor'] = False
-            globals()['action'] = ''
+            globals()['action'] == ''
+            show_tooltip('hide', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
             globals()['waitFrames'] = int(fpsRealMean / 2)
         else:
+            show_tooltip('', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
             globals()['stopCursor'] = True
             globals()['action'] = 'scrollV'
             globals()['waitFrames'] = int(fpsRealMean / 2)
@@ -670,8 +675,7 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
 
     # Cálculos específicos para cada variável
     if var_name == 'kiss':
-        distance = (distance_x + distance_y) / globals()['irisDistance'] - 1
-        distance *= 50
+        distance = (np.sum(distance_x + distance_y) / globals()['irisDistance'] - 1) * 50
     elif var_name == 'leftEye':
         distance = (distance_x + distance_y) / globals()['overLeftEye'] * 50 - 9
         if distance < 0:
@@ -700,31 +704,6 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
         globals()[var_name_confirmation] = 1
         globals()[var_name_clicked] = False
 
-def calculate_distance3D(var_name, top_indices, bottom_indices, distance_value, confirm_value, action_start, action_end):
-    # Calculate the distance between the top and bottom points
-    top_points = [landmarks[index] for index in top_indices]
-    bottom_points = [landmarks[index] for index in bottom_indices]
-    top_mean = np.sum(top_points)
-    bottom_mean = np.sum(bottom_points)
-    distance = np.linalg.norm((bottom_mean + 2) - (top_mean + 2)) * 500
-
-    # Save the distance in a global variable
-    globals()[var_name] = distance
-
-    # Save the running average of the distance in a global variable
-    var_name_old = (var_name + 'Old')
-    var_name_normalized = (var_name + 'Normalized')
-    var_name_mean = (var_name + 'Mean')
-
-    if var_name_old in globals():
-        globals()[var_name + 'Normalized'] = (distance + globals()[var_name + 'Mean']) / 2
-        globals()[var_name + 'Old'] = (globals()[var_name + 'Old'] * fpsRealMean + distance) / (fpsRealMean + 1)
-        globals()[var_name + 'Normalized'] = (distance + globals()[var_name + 'Old']) / 2
-    else:
-        globals()[var_name + 'Mean'] = distance
-        globals()[var_name + 'Normalized'] = distance
-        globals()[var_name + 'Old'] = distance
-
 def verify_false_click(var_name, distance_value, confirm_value, action_start, action_end):
     var_confirmation = globals()[f"{var_name}Confirmation"]
     distance = globals()[var_name]
@@ -740,10 +719,7 @@ def verify_false_click(var_name, distance_value, confirm_value, action_start, ac
     var_normalized = globals()[f"{var_name}Normalized"]
 
     if not globals()[f"{var_name}Clicked"] and not globals()['clicked'] and eyesOpen >= 3 and waitFrames == 0:
-        if (eyesOpen and distance < var_old * distance_value and not standByClick and 
-            ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or 
-             (rightMoved not in ['no', 'null']) or 
-             (leftMoved not in ['no', 'null']))):
+        if eyesOpen and distance < var_old * distance_value and not standByClick and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (var_name == 'kiss')):
             
             globals()[f"{var_name}Confirmation"] += 1
             globals()['confirmationTimeout'] = int(fpsRealMean / 3) + confirm_value
@@ -875,8 +851,8 @@ def mediapipe_processing():
     global mousePointXabsOld, mousePointYabsOld, mousePointXabs, mousePointYabs, slowMove, mousePositionFrameX, mousePositionFrameY
     global maybeScreenLimitX, maybeScreenLimitY, action
     global oldframeTime, fpsReal, fpsRealMean
-    global fpsBrightness, gain  # Add any other globals you modify here
-
+    global fpsBrightness, gain, scrollValueAccumulatedX  # Add any other globals you modify here
+    
     oldframeTime = time.time()  # Initialize oldframeTime
 
     # Initialize face mesh for detecting facial points
@@ -998,114 +974,6 @@ def mediapipe_processing():
                     # Mouse movement detection mode 2
                     ##############################################
                     elif args.mouseDetectionMode == 2:
-                        mouseMoveX = - ((landmarks[6][0] + landmarks[352][0] + 2) - (landmarks[6][0] + landmarks[123][0] + 2)) * args.mouseSpeedX * 5
-                        mouseMoveY = - ((landmarks[6][1] + landmarks[352][1] + 2) - (landmarks[6][1] + landmarks[123][1] + 2)) * args.mouseSpeedY * 5
-
-                        if zeroPointX2 is None:
-                            zeroPointX = mouseMoveX
-                            zeroPointY = mouseMoveY
-                            zeroPointX2 = mouseMoveX
-                            zeroPointY2 = mouseMoveY
-
-                        if args.startIsNeutral:
-                            mousePointX = mouseMoveX - zeroPointX2
-                            mousePointY = mouseMoveY - zeroPointY2
-                        else:
-                            mousePointX = mouseMoveX
-                            mousePointY = mouseMoveY
-
-                        mousePointXabs = abs(mousePointX)
-                        mousePointYabs = abs(mousePointY)
-
-                        if slowMove > 9:
-                            slowMove -= 1
-
-                        if (mousePointXabs > args.minimalMouseMoveX or mousePointYabs > args.minimalMouseMoveY) and slowMove < 10:
-                            if mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
-                                mousePointXApply = mousePointX * mousePointXabs / args.slowMouseMoveX
-                                mousePointYApply = mousePointY * mousePointYabs / args.slowMouseMoveY
-                                slowMove = 11
-                            else:
-                                mousePointXApply = mousePointX * mousePointXabs / args.slowMouseMoveX
-                                mousePointYApply = mousePointY * mousePointYabs / args.slowMouseMoveY
-
-                            if not stopCursor:
-                                mouse_position = get_mouse_position()
-                                if mousePositionFrameX == mouse_position[0] and abs(mousePointXApply) > args.minimalMouseMoveX:
-                                    maybeScreenLimitX += 1
-                                else:
-                                    maybeScreenLimitX = 0
-                                
-                                if maybeScreenLimitX >= 3:
-                                    mousePointXApply = 0
-                                    mousePointXabs = 0
-
-                                if mousePositionFrameY == mouse_position[1] and abs(mousePointYApply) > args.minimalMouseMoveY:
-                                    maybeScreenLimitY += 1
-                                else:
-                                    maybeScreenLimitY = 0
-                                
-                                if maybeScreenLimitY >= 3:
-                                    mousePointYApply = 0
-                                    mousePointYabs = 0
-
-                                mousePositionFrameX, mousePositionFrameY = mouse_position
-                                set_mouse_position(int(mousePointXApply), int(mousePointYApply))
-
-                    ##############################################
-                    # Mouse movement detection mode 3
-                    ##############################################
-                    elif args.mouseDetectionMode == 3:
-                        mouseMoveX = ((math.atan((landmarks[1][0] + ((landmarks[454][0] + landmarks[473][0] + landmarks[152][0]) / 3)) + 
-                                                 (landmarks[1][0] + ((landmarks[234][0] + landmarks[468][0] + landmarks[10][0]) / 3))) * 
-                                              180 / math.pi * 2.2) * 100) - 12000
-
-                        mouseMoveY = ((math.atan((landmarks[1][1] - ((landmarks[152][1] + landmarks[473][1] + landmarks[34][1]) / 3)) + 
-                                                 (landmarks[1][1] + ((landmarks[10][1] + landmarks[468][1] + landmarks[264][1]) / 3))) * 
-                                              180 / math.pi * 2.2) * 100) - 10000
-
-                        if zeroPointX2 is None:
-                            zeroPointX = mouseMoveX
-                            zeroPointY = mouseMoveY
-                            zeroPointX2 = mouseMoveX
-                            zeroPointY2 = mouseMoveY
-                            mousePointXabs = 0
-                            mousePointYabs = 0
-
-                        mousePointX = (mouseMoveX + mousePositionFrameX * 6) / 7
-                        mousePointY = (mouseMoveY + mousePositionFrameY * 6) / 7
-
-                        mousePointXabs = abs(mousePointX)
-                        mousePointYabs = abs(mousePointY)
-
-                        if slowMove > 9:
-                            slowMove -= 1
-
-                        if (mousePointXabs > args.minimalMouseMoveX or mousePointYabs > args.minimalMouseMoveY) and slowMove < 10:
-                            if mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY:
-                                mousePointXApply = mousePointX * mousePointXabs / args.slowMouseMoveX
-                                mousePointYApply = mousePointY * mousePointYabs / args.slowMouseMoveY
-                                slowMove = 11
-                            else:
-                                mousePointXApply = mousePointX * mousePointXabs / args.slowMouseMoveX
-                                mousePointYApply = mousePointY * mousePointYabs / args.slowMouseMoveY
-
-                            if not stopCursor:
-                                set_mouse_position(int(mousePointXApply), int(mousePointYApply))
-
-                                mouse_position = get_mouse_position()
-                                if mousePositionFrameX == mouse_position[0] and mousePointXabs > 1:
-                                    zeroPointX2 -= (zeroPointX2 - mouseMoveX) * 0.1
-
-                                if mousePositionFrameY == mouse_position[1] and mousePointYabs > 1:
-                                    zeroPointY2 -= (zeroPointY2 - mouseMoveY) * 0.1
-
-                                mousePositionFrameX, mousePositionFrameY = mouse_position
-
-                    ##############################################
-                    # Mouse movement detection mode 4
-                    ##############################################
-                    elif args.mouseDetectionMode == 4:
                         mouseMoveX = (math.atan((landmarks[1][0] + ((landmarks[454][0] + landmarks[473][0] + landmarks[152][0]) / 3))) * 3)
                         mouseMoveX = mouseMoveX ** 4 * 4
 
@@ -1189,27 +1057,25 @@ def mediapipe_processing():
                                 (mousePointXabsOld > mousePointXabs and not clicked)):
                                 eyesOpen = 3
 
-                    if args.enableRightEye:
+                    if args.enableRightEye and globals()['action'] != 'scrollV':
                         verify_false_click('rightEye', 0.7, 0, 'pressRight', 'releaseRight')
 
-                    if args.enableLeftEye:
+                    if args.enableLeftEye and globals()['action'] != 'scrollV':
                         verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft')
 
                     if args.enableKiss:
-                        verify_false_click('kiss', 0.7, 1, 'scrollV', 'wait')
+                        verify_false_click('kiss', 0.7, 1, 'pressScrollV', 'releaseScrollV')
 
                     if action == 'scrollV' and mousePointYabs > args.minimalMouseMoveY:
-                        globals()['stopCursor'] = True
                         print(f"mousepoint {mousePointYabs}")
                         print(f"args.minimalMouseMoveY {args.minimalMouseMoveY}")
 
                         scrollValueX = mousePointYApply / fpsRealMean
-                        if 0 < scrollValueX < 1:
-                            scrollValueX = 1
-                        elif -1 < scrollValueX < 0:
-                            scrollValueX = -1
-                        mouse.scroll(0, -scrollValueX)
-                        globals()['slowMove'] = 10 + (fpsRealMean / 10)
+                        scrollValueAccumulatedX += scrollValueX
+
+                        if scrollValueAccumulatedX > 1 or scrollValueAccumulatedX < -1:
+                            mouse.scroll(0, int(-scrollValueAccumulatedX))
+                            scrollValueAccumulatedX = 0
                     elif action == 'showOptions1':
                         mouse_position = get_mouse_position()
                         if mousePointXApply < -args.minimalMouseMoveX * 3:
@@ -1367,11 +1233,6 @@ def mediapipe_processing():
                                 # line1 = plotting_ear(pts_plot, line1, min_value, max_value)  # Call function to plot the graph
                             countFrames += 1
                             
-                        # if not trayRunning:
-                        #     # Create the tray icon
-                        #     trayRunning = True
-                        #     tray = TrayIcon(icon_qt)
-
                         if not running:
                             break
 
@@ -1401,6 +1262,7 @@ tray_icon = TrayIcon(icon_qt)
 # Global flag to control the application's running state
 running = True
 trayRunning = False
+
 
 # Start the mediapipe processing in a separate thread
 mediapipe_thread = threading.Thread(target=mediapipe_processing, daemon=True)
