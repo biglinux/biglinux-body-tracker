@@ -9,14 +9,12 @@ import math
 import numpy as np
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image, ImageTk
+from PIL import Image
 from pynput.mouse import Button, Controller
-from PyQt6 import QtWidgets, QtGui, QtCore
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
-import cv2
-import mediapipe as mp
-from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
 
+
+
+# Used to found files after use pyinstaller
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -116,6 +114,11 @@ arg_info = {
         'type': int,
         'help': 'Webcam Y resolution',
         'default': 768
+    },
+    'webcamToRGB': {
+        'type': bool,
+        'help': 'Some webcams need conversion to RGB',
+        'default': False
     },
     'fps': {
         'type': int,
@@ -290,125 +293,108 @@ gain = 400
 fpsBrightness = 0
 scrollValueAccumulatedX = 0
 
-# Video Source Classes
-class VideoSource:
-    def __init__(self, flip=False, display=False, dtype=np.uint8):
-        self._name = "VideoSource"
-        self._capture = None
-        self._display = display
-        self._dtype = dtype
-        self._flip = flip
+#####################
+# Mouse Control Functions
+#####################
 
-    def get_fps(self):
-        return self._capture.get(cv2.CAP_PROP_FPS)
+# Initialize mouse controller
+mouse = Controller()
 
-    def get_frame_count(self):
-        return int(self._capture.get(cv2.CAP_PROP_FRAME_COUNT))
+# Function to get screen size using xrandr
+def get_screen_size():
+    try:
+        # Execute xrandr command and capture output
+        result = subprocess.run(["xrandr"], capture_output=True, text=True)
+        output = result.stdout
 
-    def get_image_size(self):
-        width = self._capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-        height = self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        return width, height
+        # Filter the line containing the current resolution
+        resolution_line = next((line for line in output.splitlines() if '*' in line), None)
 
-    def release(self):
-        if self._capture is not None:
-            self._capture.release()
-        cv2.destroyAllWindows()
+        if resolution_line:
+            # Find resolution in WxH format, e.g., "1920x1080"
+            resolution = next((word for word in resolution_line.split() if 'x' in word), None)
+            
+            if resolution:
+                width, height = map(int, resolution.split('x'))
+                return width, height
 
-    def __iter__(self):
-        if self._capture is not None and self._capture.isOpened():
-            return self
+        # Return default values if resolution detection fails
+        return 1920, 1080
+    except Exception as e:
+        print(f"Error obtaining screen resolution with xrandr: {e}")
+        return 1920, 1080  # Default value in case of error
+
+# Get screen size
+screen_width, screen_height = get_screen_size()
+
+# Detect Wayland
+if os.getenv('XDG_SESSION_TYPE') == 'wayland':
+    graphics_system = 'wayland'
+else:
+    graphics_system = 'xorg'
+
+# Global variables to store the last known mouse position
+last_known_x = None
+last_known_y = None
+
+# Variables for caching mouse position
+cached_mouse_position = (0, 0)
+last_mouse_update_time = 0
+
+# Function to get the current mouse position compatible with Xorg and Wayland
+def get_mouse_position():
+    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
+    current_time = time.time()
+    
+    # Update mouse position once per two seconds
+    if current_time - last_mouse_update_time > 2:
+        if graphics_system == 'wayland':
+            try:
+                result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
+                output = result.stdout
+                position = {}
+
+                for line in output.splitlines():
+                    if line.startswith("X="):
+                        position['X'] = int(line.split('=')[1].strip())
+                    elif line.startswith("Y="):
+                        position['Y'] = int(line.split('=')[1].strip())
+
+                if 'X' in position and 'Y' in position:
+                    last_known_x, last_known_y = position['X'], position['Y']
+                cached_mouse_position = (last_known_x, last_known_y)
+            except Exception as e:
+                print(f"Error obtaining mouse position with kdotool: {e}")
         else:
-            raise StopIteration
+            last_known_x, last_known_y = mouse.position
+            cached_mouse_position = (last_known_x, last_known_y)
+        
+        last_mouse_update_time = current_time
+    
+    return cached_mouse_position
 
-    def __next__(self):
-        if self._capture is None or not self._capture.isOpened():
-            raise StopIteration
+# Function to set the mouse position compatible with Xorg and Wayland
+def set_mouse_position(delta_x, delta_y):
+    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
+    if graphics_system == 'wayland':
+        current_x, current_y = get_mouse_position()
+        new_x = current_x + delta_x
+        new_y = current_y + delta_y
+        if last_known_x is not None and last_known_y is not None:
+            # Ensure the new position does not exceed screen boundaries
+            new_x = max(0, min(new_x, screen_width - 1))
+            new_y = max(0, min(new_y, screen_height - 1))
+        mouse.position = (new_x, new_y)
+        
+        # Save caches changes in mouse position until detected again with kdotool
+        cached_mouse_position = (new_x, new_y)
+    else:
+        mouse.move(delta_x, delta_y)
 
-        ret, frame = self._capture.read()
-
-        if self._flip:
-            frame = cv2.flip(frame, 3)
-
-        if not ret:
-            raise StopIteration
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            raise StopIteration
-
-        cv2_im_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_rgb = np.asarray(Image.fromarray(cv2_im_rgb), dtype=self._dtype)
-
-        return frame, frame_rgb
-
-    def __del__(self):
-        self.release()
-
-    def gain(self, gain):
-        if self._capture is None:
-            return
-
-        Gain = self._capture.get(cv2.CAP_PROP_GAIN)
-        Brightness = self._capture.get(cv2.CAP_PROP_BRIGHTNESS)
-        Contrast = self._capture.get(cv2.CAP_PROP_CONTRAST)
-        Gamma = self._capture.get(cv2.CAP_PROP_GAMMA)
-        Backlight = self._capture.get(cv2.CAP_PROP_BACKLIGHT)
-
-        if gain == 1:
-            self._capture.set(cv2.CAP_PROP_GAIN, Gain + 2)
-            self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness + 1)
-            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast + 2)
-            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma + 1)
-            self._capture.set(cv2.CAP_PROP_BACKLIGHT, Backlight + 1)
-        elif gain == 0:
-            self._capture.set(cv2.CAP_PROP_GAIN, Gain - 2)
-            self._capture.set(cv2.CAP_PROP_BRIGHTNESS, Brightness - 1)
-            self._capture.set(cv2.CAP_PROP_CONTRAST, Contrast - 2)
-            self._capture.set(cv2.CAP_PROP_GAMMA, Gamma - 2)
-            self._capture.set(cv2.CAP_PROP_BACKLIGHT, Backlight - 1)
-
-    def show(self, frame, webcamx, webcamy):
-        cv2.namedWindow("BigHeadTrack", cv2.WINDOW_GUI_NORMAL)
-        cv2.imshow("BigHeadTrack", frame)
-        cv2.resizeWindow("BigHeadTrack", webcamx, webcamy)
-
-class WebcamSource(VideoSource):
-    def __init__(
-        self,
-        camera_id=0,
-        width=1024,
-        height=768,
-        fps=15,
-        autofocus=0,
-        absolute_focus=75,
-        flip=True,
-        display=False,
-    ):
-        super().__init__(flip, display)
-        self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
-        self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-        self._capture.set(cv2.CAP_PROP_GAIN, 0)
-        self._capture.set(cv2.CAP_PROP_EXPOSURE, (1 / (fps / 10000)))
-        self._capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        self._capture.set(cv2.CAP_PROP_FPS, fps)
-        self._capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)
-        self._capture.set(cv2.CAP_PROP_FOCUS, absolute_focus / 255)
-
-class FileSource(VideoSource):
-    def __init__(self, file_path, flip=False, display=False):
-        super().__init__(flip, display)
-        self._capture = cv2.VideoCapture(str(file_path))
-
-# Initialize Video Source
-source = WebcamSource(width=args.webcamx, height=args.webcamy, fps=args.fps, camera_id=args.webcamid)
 
 #####################
 # Tooltip Code
 #####################
-
-# Global variable to keep reference to the current tooltip
 current_tooltip = None
 
 # Function to run Tkinter in a separate thread
@@ -455,12 +441,16 @@ def tkinter_tooltip_main():
         adjusted_mouseX = mouseX
         adjusted_mouseY = mouseY
 
-        if adjusted_mouseX > screen_width - tooltipWidth - 40:
+        if adjusted_mouseX == 'center':
+            adjusted_mouseX = screen_width / 2 - tooltipWidth / 2
+        elif adjusted_mouseX > screen_width - tooltipWidth - 40:
             adjusted_mouseX = adjusted_mouseX - tooltipWidth - 40
         else:
             adjusted_mouseX = adjusted_mouseX + tooltipWidth + 40
 
-        if adjusted_mouseY > screen_height - tooltipHeight - 40:
+        if adjusted_mouseY == 'center':
+            adjusted_mouseY = screen_height / 2 - tooltipHeight / 2
+        elif adjusted_mouseY > screen_height - tooltipHeight - 40:
             adjusted_mouseY = adjusted_mouseY - tooltipHeight - 40
         else:
             adjusted_mouseY = adjusted_mouseY + tooltipHeight + 40
@@ -474,9 +464,8 @@ def tkinter_tooltip_main():
             fg=color, 
             bg=bg, 
             font=("Ubuntu Mono", tooltipFontSize),
-            borderwidth=2, 
-            highlightbackground=color, 
-            highlightthickness=2
+            relief="solid",
+            bd=2
         )
         label.pack(expand=True, fill=tk.BOTH)
 
@@ -486,110 +475,192 @@ def tkinter_tooltip_main():
     # Expose the show_tooltip function to be globally accessible
     global show_tooltip
     show_tooltip = show_tooltip_scheduled
-
+    
     tkTooltip.mainloop()
 
 # Start the Tkinter thread to manage tooltips
 tkinter_thread = threading.Thread(target=tkinter_tooltip_main, daemon=True)
 tkinter_thread.start()
 
-#####################
-# Mouse Control Functions
-#####################
-
-# Initialize mouse controller
-mouse = Controller()
-
-# Function to get screen size using xrandr
-def get_screen_size():
-    try:
-        # Execute xrandr command and capture output
-        result = subprocess.run(["xrandr"], capture_output=True, text=True)
-        output = result.stdout
-
-        # Filter the line containing the current resolution
-        resolution_line = next((line for line in output.splitlines() if '*' in line), None)
-
-        if resolution_line:
-            # Find resolution in WxH format, e.g., "1920x1080"
-            resolution = next((word for word in resolution_line.split() if 'x' in word), None)
-            
-            if resolution:
-                width, height = map(int, resolution.split('x'))
-                return width, height
-
-        # Return default values if resolution detection fails
-        return 1920, 1080
-    except Exception as e:
-        print(f"Error obtaining screen resolution with xrandr: {e}")
-        return 1920, 1080  # Default value in case of error
-
-# Get screen size
-screen_width, screen_height = get_screen_size()
+# Show message about ready to use
+# Get initial screen dimensions using Tkinter
+root = tk.Tk()
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+root.destroy()
 
 # Move mouse to the center of the screen
 mouse.position = (screen_width / 2, screen_height / 2)
 
-# Show message about ready to use
-show_tooltip('Program started', "#000000", "#00b600", screen_width / 2, screen_height / 2)
+# Show message about ready to use (moved after tkinter thread starts)
+def show_initial_message():
+    # time.sleep(0.5)  # Wait for tkinter thread to initialize
+    show_tooltip('Loading BigHeadTracker', "#000000", "#ffe600", 'center', 'center')
 
-# Global variables to store the last known mouse position
-last_known_x = None
-last_known_y = None
+threading.Thread(target=show_initial_message, daemon=True).start()
 
-# Variables for caching mouse position
-cached_mouse_position = (0, 0)
-last_mouse_update_time = 0
 
-# Function to get the current mouse position compatible with Xorg and Wayland
-def get_mouse_position():
-    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
-    current_time = time.time()
-    
-    # Update mouse position once per two seconds
-    if current_time - last_mouse_update_time > 2:
-        if os.getenv('XDG_SESSION_TYPE') == 'wayland':
-            try:
-                result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
-                output = result.stdout
-                position = {}
+#####################
+# System Tray with PyQt6
+#####################
 
-                for line in output.splitlines():
-                    if line.startswith("X="):
-                        position['X'] = int(line.split('=')[1].strip())
-                    elif line.startswith("Y="):
-                        position['Y'] = int(line.split('=')[1].strip())
+from PyQt6 import QtWidgets, QtGui, QtCore
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 
-                if 'X' in position and 'Y' in position:
-                    last_known_x, last_known_y = position['X'], position['Y']
-                cached_mouse_position = (last_known_x, last_known_y)
-            except Exception as e:
-                print(f"Error obtaining mouse position with kdotool: {e}")
-        else:
-            last_known_x, last_known_y = mouse.position
-            cached_mouse_position = (last_known_x, last_known_y)
+class TrayIcon(QSystemTrayIcon):
+    def __init__(self, icon, parent=None):
+        super().__init__(icon, parent)
+        self.setToolTip("Accessibility Program")
+        self.activated.connect(self.on_tray_activated)
+        self.show()
+
+        # Create the menu
+        menu = QMenu(parent)
+        exit_action = menu.addAction("Exit")
+        exit_action.triggered.connect(self.on_exit)
+
+        self.setContextMenu(menu)
+
+    def on_tray_activated(self, reason):
+        """
+        Handle activation (click) events on the tray icon.
+        Show the confirmation dialog on left-click.
+        """
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            print("Tray icon clicked. Showing confirmation dialog.")
+            threading.Thread(target=show_exit_confirmation, daemon=True).start()
+
+    def on_exit(self):
+        """
+        Handle the exit action from the tray menu.
+        """
+        print("Exit action triggered. Showing confirmation dialog.")
+        threading.Thread(target=show_exit_confirmation, daemon=True).start()
+
+# Function to show exit confirmation dialogs using Tkinter
+def show_exit_confirmation():
+    # First confirmation dialog
+    if messagebox.askyesno("Confirm Exit", "Are you sure you want to exit the program?"):
+        # Second confirmation dialog
+        if messagebox.askyesno("Final Confirmation", "Are you really sure you want to exit the program?"):
+            # User confirmed exit
+            global running
+            running = False  # Signal the mediapipe loop to stop
+            tray_icon.hide()  # Hide the tray icon
+            QApplication.quit()  # Quit the PyQt application
+
+
+import cv2
+import mediapipe as mp
+from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
+
+# Video Source Classes
+class VideoSource:
+    def __init__(self, flip=False, display=False, dtype=np.uint8):
+        self._name = "VideoSource"
+        self._capture = None
+        self._display = display
+        self._dtype = dtype
+        self._flip = flip
+        self._window_initialized = False
+
+    @property
+    def fps(self):
+        return self._capture.get(cv2.CAP_PROP_FPS)
+
+    @property
+    def frame_count(self):
+        return int(self._capture.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    @property
+    def image_size(self):
+        return (
+            self._capture.get(cv2.CAP_PROP_FRAME_WIDTH),
+            self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        )
+
+    def release(self):
+        if self._capture is not None:
+            self._capture.release()
+        if self._window_initialized:
+            cv2.destroyAllWindows()
+            self._window_initialized = False
+
+    def __iter__(self):
+        if self._capture is not None and self._capture.isOpened():
+            return self
+        raise StopIteration
+
+    def __next__(self):
+        if self._capture is None or not self._capture.isOpened():
+            raise StopIteration
+
+        ret, frame = self._capture.read()
+        if not ret:
+            raise StopIteration
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            raise StopIteration
+
+        if self._flip:
+            frame = cv2.flip(frame, 1)  # Changed to 1 for horizontal flip
+            
+        if args.webcamToRGB:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        return frame
+
+    def __del__(self):
+        self.release()
+
+    def gain(self, gain):
+        if self._capture is None:
+            return
+
+        props = {
+            cv2.CAP_PROP_GAIN: (2 if gain == 1 else -2),
+            cv2.CAP_PROP_BRIGHTNESS: (1 if gain == 1 else -1),
+            cv2.CAP_PROP_CONTRAST: (2 if gain == 1 else -2),
+            cv2.CAP_PROP_GAMMA: (1 if gain == 1 else -2),
+            cv2.CAP_PROP_BACKLIGHT: (1 if gain == 1 else -1)
+        }
+
+        for prop, value in props.items():
+            current = self._capture.get(prop)
+            self._capture.set(prop, current + value)
+
+    def show(self, frame, webcamx, webcamy):
+        if not self._window_initialized:
+            cv2.namedWindow("BigHeadTrack", cv2.WINDOW_GUI_NORMAL)
+            self._window_initialized = True
+        cv2.imshow("BigHeadTrack", frame)
+        cv2.resizeWindow("BigHeadTrack", webcamx, webcamy)
+
+class WebcamSource(VideoSource):
+    def __init__(self, camera_id=0, width=1024, height=768, fps=15, autofocus=0, 
+                 absolute_focus=75, flip=True, display=False):
+        super().__init__(flip, display)
+        self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
         
-        last_mouse_update_time = current_time
-    
-    return cached_mouse_position
+        # Set camera properties in a single block
+        props = {
+            cv2.CAP_PROP_FRAME_WIDTH: width,
+            cv2.CAP_PROP_FRAME_HEIGHT: height,
+            cv2.CAP_PROP_GAIN: 0,
+            cv2.CAP_PROP_EXPOSURE: 1 / (fps / 10000),
+            cv2.CAP_PROP_FOURCC: cv2.VideoWriter_fourcc(*"MJPG"),
+            cv2.CAP_PROP_FPS: fps,
+            cv2.CAP_PROP_AUTO_EXPOSURE: 3,
+            cv2.CAP_PROP_FOCUS: absolute_focus / 255
+        }
 
-# Function to set the mouse position compatible with Xorg and Wayland
-def set_mouse_position(delta_x, delta_y):
-    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
-    if os.getenv('XDG_SESSION_TYPE') == 'wayland':
-        current_x, current_y = get_mouse_position()
-        new_x = current_x + delta_x
-        new_y = current_y + delta_y
-        if last_known_x is not None and last_known_y is not None:
-            # Ensure the new position does not exceed screen boundaries
-            new_x = max(0, min(new_x, screen_width - 1))
-            new_y = max(0, min(new_y, screen_height - 1))
-        mouse.position = (new_x, new_y)
-        
-        # Save caches changes in mouse position until detected again with kdotool
-        cached_mouse_position = (new_x, new_y)
-    else:
-        mouse.move(delta_x, delta_y)
+        for prop, value in props.items():
+            self._capture.set(prop, value)
+
+
+# Initialize Video Source
+source = WebcamSource(width=args.webcamx, height=args.webcamy, fps=args.fps, camera_id=args.webcamid)
+
 
 # Function to perform mouse actions
 def make_action(action_type):
@@ -659,13 +730,13 @@ def make_action(action_type):
 #####################
 
 def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
-    # Obter as coordenadas X e Y dos pontos superiores e inferiores
+    # Get the X and Y coordinates of the top and bottom points
     top_pointsX = np.array([landmarks[index][0] for index in top_indices])
     bottom_pointsX = np.array([landmarks[index][0] for index in bottom_indices])
     top_pointsY = np.array([landmarks[index][1] for index in top_indices])
     bottom_pointsY = np.array([landmarks[index][1] for index in bottom_indices])
 
-    # Calcular a distância entre os pontos superiores e inferiores
+    # Calculate the distance between the top and bottom points
     distance_x = np.sum(bottom_pointsX + 2) - np.sum(top_pointsX + 2)
     distance_y = np.sum(bottom_pointsY + 2) - np.sum(top_pointsY + 2)
     if distance_x < 0:
@@ -673,7 +744,7 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
     if distance_y < 0:
         distance_y = 0
 
-    # Cálculos específicos para cada variável
+    # Specific calculations for each variable
     if var_name == 'kiss':
         distance = (np.sum(distance_x + distance_y) / globals()['irisDistance'] - 1) * 50
     elif var_name == 'leftEye':
@@ -687,10 +758,10 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
     else:
         distance = distance_x + distance_y
 
-    # Salvar a distância em uma variável global
+    # Save the distance in a global variable
     globals()[var_name] = distance
 
-    # Inicializar variáveis relacionadas se ainda não existirem
+    # Initialize related variables if they don't exist yet
     var_name_old = f"{var_name}Old"
     var_name_mean = f"{var_name}Mean"
     var_name_normalized = f"{var_name}Normalized"
@@ -753,11 +824,9 @@ mp_face_mesh = mp.solutions.face_mesh
 mp_face_mesh_connections = mp.solutions.face_mesh_connections
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=0, color=(0, 255, 0))
 
-# Move mouse to the center of the screen
-mouse.position = (screen_width / 2, screen_height / 2)
 
 #####################
-# Facemesh ROI Function
+# Facemesh ROI Function for auto adjusting brightness
 #####################
 def get_eyes_roi(frame, landmarks_obj):
     height, width, _ = frame.shape
@@ -797,52 +866,6 @@ def get_eyes_roi(frame, landmarks_obj):
         return None
 
 #####################
-# System Tray with PyQt6
-#####################
-
-class TrayIcon(QSystemTrayIcon):
-    def __init__(self, icon, parent=None):
-        super().__init__(icon, parent)
-        self.setToolTip("Accessibility Program")
-        self.activated.connect(self.on_tray_activated)
-        self.show()
-
-        # Create the menu
-        menu = QMenu(parent)
-        exit_action = menu.addAction("Exit")
-        exit_action.triggered.connect(self.on_exit)
-
-        self.setContextMenu(menu)
-
-    def on_tray_activated(self, reason):
-        """
-        Handle activation (click) events on the tray icon.
-        Show the confirmation dialog on left-click.
-        """
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            print("Tray icon clicked. Showing confirmation dialog.")
-            threading.Thread(target=show_exit_confirmation, daemon=True).start()
-
-    def on_exit(self):
-        """
-        Handle the exit action from the tray menu.
-        """
-        print("Exit action triggered. Showing confirmation dialog.")
-        threading.Thread(target=show_exit_confirmation, daemon=True).start()
-
-# Function to show exit confirmation dialogs using Tkinter
-def show_exit_confirmation():
-    # First confirmation dialog
-    if messagebox.askyesno("Confirm Exit", "Are you sure you want to exit the program?"):
-        # Second confirmation dialog
-        if messagebox.askyesno("Final Confirmation", "Are you really sure you want to exit the program?"):
-            # User confirmed exit
-            global running
-            running = False  # Signal the mediapipe loop to stop
-            tray_icon.hide()  # Hide the tray icon
-            QApplication.quit()  # Quit the PyQt application
-
-#####################
 # Mediapipe Processing
 #####################
 
@@ -854,7 +877,7 @@ def mediapipe_processing():
     global fpsBrightness, gain, scrollValueAccumulatedX  # Add any other globals you modify here
     
     oldframeTime = time.time()  # Initialize oldframeTime
-
+    
     # Initialize face mesh for detecting facial points
     with mp_face_mesh.FaceMesh(
         static_image_mode=False,
@@ -865,7 +888,7 @@ def mediapipe_processing():
     ) as face_mesh:
         while running:
             try:
-                frame, frame_rgb = next(iter(source))
+                frame_rgb = next(iter(source))
             except StopIteration:
                 break
 
@@ -1136,37 +1159,30 @@ def mediapipe_processing():
                     ##############################
                     if args.view == 2:
                         # Left Eye Upper0 / Right Eye Lower0
-                        # Olho esquerdo parte superior0 / Olho direito parte inferior0
                         for id in [246, 161, 160, 159, 158, 157, 173, 33, 7, 163, 144, 145, 153, 154, 155, 133, 263, 249, 390, 373, 374, 380, 381, 382, 362, 466, 388, 387, 386, 385, 384, 398]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (155, 155, 155), 1)
 
                         # Left Eye Top
-                        # Olho esquerdo parte superior
                         for id in [158, 159, 160]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
 
                         # Left Eye Bottom
-                        # Olho esquerdo parte inferior
                         for id in [144, 145, 163]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
 
                         # Right Eye Top
-                        # Olho direito parte superior
                         for id in [385, 386, 387]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
 
                         # Right Eye Bottom
-                        # Olho direito parte inferior
                         for id in [373, 374, 380]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
 
                         # Nose and iris
-                        # Nariz e íris
                         for id in [1, 468, 473]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (55, 255, 55), 1)
 
                         # Face Oval
-                        # Oval do rosto
                         for id in [10, 338, 338, 297, 297, 332, 332, 284, 284, 251, 251, 389, 389, 356, 356, 454, 454, 323, 323, 361, 361, 288, 288, 397, 397, 365, 365, 379, 379, 378, 378, 400, 400, 377, 377, 152, 152, 148, 148, 176, 176, 149, 149, 150, 150, 136, 136, 172, 172, 58, 58, 132, 132, 93, 93, 234, 234, 127, 127, 162, 162, 21, 21, 54, 54, 103, 103, 67, 67, 109, 109, 10]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 0), 1)
 
@@ -1175,18 +1191,15 @@ def mediapipe_processing():
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
 
                         # Lips Bottom Inner
-                        # Desenha círculos para os pontos de referência internos do lábio inferior
                         for id in [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
 
 
                         # Lips Top Outer
-                        # Desenha círculos para os pontos de referência externos do lábio superior
                         for id in [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
 
                         # Lips Bottom Outer
-                        # Desenha círculos para os pontos de referência externos do lábio inferior
                         for id in [146, 91, 181, 84, 17, 314, 405, 321, 375, 291]:
                             cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
 
@@ -1236,10 +1249,6 @@ def mediapipe_processing():
                         if not running:
                             break
 
-#####################
-# Initialize PyQt6 Application for System Tray
-#####################
-
 # Initialize PyQt6 Application for System Tray
 app_qt = QApplication(sys.argv)
 
@@ -1255,18 +1264,15 @@ icon_qt = QtGui.QIcon(icon_path)
 # Create and display the tray icon
 tray_icon = TrayIcon(icon_qt)
 
-#####################
-# Initialize and Start Mediapipe Processing
-#####################
-
 # Global flag to control the application's running state
 running = True
-trayRunning = False
-
 
 # Start the mediapipe processing in a separate thread
 mediapipe_thread = threading.Thread(target=mediapipe_processing, daemon=True)
 mediapipe_thread.start()
+
+# Show message about ready to use
+show_tooltip('Ready', "#000000", "#00b600", 'center', screen_height / 2)
 
 #####################
 # Start the PyQt6 Event Loop
