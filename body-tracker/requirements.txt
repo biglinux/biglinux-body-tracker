@@ -4,3 +4,4 @@ numpy
 Pillow
 pynput
 pyqt6
+screeninfo

@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import sys
+from screeninfo import get_monitors
 import argparse
 import configparser
 import math
@@ -214,22 +215,24 @@ gain = 400
 fpsBrightness = 0
 scrollValueAccumulatedY = 0
 scrollValueAccumulatedX = 0
+last_mouse_update_time = 0
 
 #
 # Initialize mouse controller
 #
 mouse = Controller()
 
-# Function to get screen size using tkinter
+# Function to get total screen size across all monitors using screeninfo
 def get_screen_size():
     try:
-        # Get screen dimensions
-        root = tk.Tk()
-        width = root.winfo_screenwidth()
-        height = root.winfo_screenheight()
-        # Clean up
-        root.destroy()
-        return width, height
+        monitors = get_monitors()
+        min_x = min(monitor.x for monitor in monitors)
+        min_y = min(monitor.y for monitor in monitors)
+        max_x = max(monitor.x + monitor.width for monitor in monitors)
+        max_y = max(monitor.y + monitor.height for monitor in monitors)
+        total_width = max_x - min_x
+        total_height = max_y - min_y
+        return total_width, total_height
     except Exception as e:
         print(f"Error obtaining screen resolution: {e}")
         return 1920, 1080  # Default fallback values
@@ -243,26 +246,27 @@ last_known_y = screen_height / 2
 
 # Variables for caching mouse position
 cached_mouse_position = (screen_width / 2, screen_height / 2)
-last_mouse_update_time = 0
+last_mouse_update_time = int(time.time())
+
 
 def get_mouse_position():
-    global cached_mouse_position, last_mouse_update_time, screen_width, screen_height
-    current_time = time.time()
-
+    global cached_mouse_position, screen_width, screen_height, last_mouse_update_time
+    current_time = int(time.time())
     # Every 3 seconds, check if the screen resolution has changed
     if current_time - last_mouse_update_time > 3:
+        last_mouse_update_time = current_time
         new_screen_width, new_screen_height = get_screen_size()
+        print(new_screen_width, new_screen_height)
         if new_screen_width != screen_width or new_screen_height != screen_height:
             screen_width, screen_height = new_screen_width, new_screen_height
             cached_mouse_position = (screen_width / 2, screen_height / 2)
-            last_known_x, last_known_y = screen_width / 2, screen_height / 2
             # Move the mouse to the center of the screen
             mouse.position = (screen_width / 2, screen_height / 2)
     
     return cached_mouse_position
 
 def set_mouse_position(delta_x, delta_y):
-    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
+    global last_known_x, last_known_y, cached_mouse_position
     current_x, current_y = get_mouse_position()
     new_x = current_x + delta_x
     new_y = current_y + delta_y
@@ -319,9 +323,6 @@ def tkinter_tooltip_main():
             tooltipHeight = tooltipFontSize + 14
 
         # Adjust the position so that the tooltip does not go off the screen
-        screen_width = tooltip.winfo_screenwidth()
-        screen_height = tooltip.winfo_screenheight()
-
         adjusted_mouseX = mouseX
         adjusted_mouseY = mouseY
 
