@@ -69,7 +69,7 @@ arg_info = {
     'plot': {'type': int, 'help': 'Plot the face landmarks', 'default': 0},
     
     # Mouse detection and control
-    'mouseDetectionMode': {'type': int, 'help': 'Mouse detection mode (1-4)', 'default': 4},
+    'mouseDetectionMode': {'type': int, 'help': 'Mouse detection mode (1-4)', 'default': 1},
     'startIsNeutral': {'type': bool, 'help': 'Start position is neutral', 'default': True},
     
     # Eye control settings
