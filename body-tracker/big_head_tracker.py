@@ -220,31 +220,20 @@ scrollValueAccumulatedX = 0
 #
 mouse = Controller()
 
-# Function to get screen size using xrandr
+# Function to get screen size using tkinter
 def get_screen_size():
     try:
-        # Execute xrandr command and capture output
-        result = subprocess.run(["xrandr"], capture_output=True, text=True)
-        output = result.stdout
-
-        # Filter the line containing the current resolution
-        resolution_line = next((line for line in output.splitlines() if '*' in line), None)
-
-        if resolution_line:
-            # Find resolution in WxH format, e.g., "1920x1080"
-            resolution = next((word for word in resolution_line.split() if 'x' in word), None)
-            
-            if resolution:
-                width, height = map(int, resolution.split('x'))
-                return width, height
-
-        # Return default values if resolution detection fails
-        return 1920, 1080
+        # Get screen dimensions
+        width = root.winfo_screenwidth()
+        height = root.winfo_screenheight()
+        # Clean up
+        root.destroy()
+        return width, height
     except Exception as e:
-        print(f"Error obtaining screen resolution with xrandr: {e}")
-        return 1920, 1080  # Default value in case of error
+        print(f"Error obtaining screen resolution: {e}")
+        return 1920, 1080  # Default fallback values
 
-# Get screen size
+# Get screen size 
 screen_width, screen_height = get_screen_size()
 
 # Global variables to store the last known mouse position
@@ -259,8 +248,8 @@ def get_mouse_position():
     global cached_mouse_position, last_mouse_update_time, screen_width, screen_height
     current_time = time.time()
 
-    # Every 4 seconds, check if the screen resolution has changed
-    if current_time - last_mouse_update_time > 4:
+    # Every 3 seconds, check if the screen resolution has changed
+    if current_time - last_mouse_update_time > 3:
         new_screen_width, new_screen_height = get_screen_size()
         if new_screen_width != screen_width or new_screen_height != screen_height:
             screen_width, screen_height = new_screen_width, new_screen_height
