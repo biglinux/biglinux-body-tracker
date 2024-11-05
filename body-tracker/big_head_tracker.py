@@ -224,6 +224,7 @@ mouse = Controller()
 def get_screen_size():
     try:
         # Get screen dimensions
+        root = tk.Tk()
         width = root.winfo_screenwidth()
         height = root.winfo_screenheight()
         # Clean up
