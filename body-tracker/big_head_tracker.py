@@ -12,8 +12,6 @@ from tkinter import messagebox
 from PIL import Image
 from pynput.mouse import Button, Controller
 
-
-
 # Used to found files after use pyinstaller
 def resource_path(relative_path):
     try:
@@ -63,118 +61,41 @@ def write_config(var_name, var_value, section_name='General', config_file='confi
     with open(config_path, 'w') as configfile:
         config.write(configfile)
 
-# Argument Parsing
+# Argument Parsing - Optimized configuration using a more concise dictionary structure
 arg_info = {
-    'view': {
-        'type': int,
-        'help': 'Show webcam image',
-        'default': 0
-    },
-    'mouseDetectionMode': {
-        'type': int,
-        'help': 'Mouse detection mode 1 or 2 or 3 or 4',
-        'default': 4
-    },
-    'startIsNeutral': {
-        'type': bool,
-        'help': 'Start position is neutral position True or False',
-        'default': True
-    },
-    'enableLeftEye': {
-        'type': bool,
-        'help': 'Use left eye blink True or False',
-        'default': True
-    },
-    'enableRightEye': {
-        'type': bool,
-        'help': 'Use right eye blink True or False',
-        'default': True
-    },
-    'leftEyeBlinkFunction': {
-        'type': str,
-        'help': 'clickLeft or clickCenter or clickRight or drag or doubleClick or scrollV or scrollH',
-        'default': 'clickLeft'
-    },
-    'enableKiss': {
-        'type': bool,
-        'help': 'Use kiss True or False',
-        'default': True
-    },
-    'webcamid': {
-        'type': int,
-        'help': 'Webcam ID',
-        'default': 0
-    },
-    'webcamx': {
-        'type': int,
-        'help': 'Webcam X resolution',
-        'default': 1024
-    },
-    'webcamy': {
-        'type': int,
-        'help': 'Webcam Y resolution',
-        'default': 768
-    },
-    'webcamToRGB': {
-        'type': bool,
-        'help': 'Some webcams need conversion to RGB',
-        'default': False
-    },
-    'fps': {
-        'type': int,
-        'help': 'Frames per second',
-        'default': 15
-    },
-    'plot': {
-        'type': int,
-        'help': 'Plot the face landmarks',
-        'default': 0
-    },
-    'blinkToClick': {
-        'type': int,
-        'help': 'Blink to click',
-        'default': 1
-    },
-    'minimalMouseMoveY': {
-        'type': int,
-        'help': 'Minimal mouse move Y',
-        'default': 3
-    },
-    'minimalMouseMoveX': {
-        'type': int,
-        'help': 'Minimal mouse move X',
-        'default': 3
-    },
-    'slowMouseMoveY': {
-        'type': int,
-        'help': 'Slow mouse move Y',
-        'default': 9
-    },
-    'slowMouseMoveX': {
-        'type': int,
-        'help': 'Slow mouse move X',
-        'default': 9
-    },
-    'mouseSpeedX': {
-        'type': int,
-        'help': 'Mouse speed X',
-        'default': 40
-    },
-    'mouseSpeedY': {
-        'type': int,
-        'help': 'Mouse speed Y',
-        'default': 40
-    },
-    'autoBrightness': {
-        'type': bool,
-        'help': 'Automatically adjust brightness',
-        'default': True
-    },
-    'mouthScroll': {
-        'type': int,
-        'help': 'Enable mouth scrolling',
-        'default': 0
-    },
+    # Display settings
+    'view': {'type': int, 'help': 'Show webcam image', 'default': 0},
+    'plot': {'type': int, 'help': 'Plot the face landmarks', 'default': 0},
+    
+    # Mouse detection and control
+    'mouseDetectionMode': {'type': int, 'help': 'Mouse detection mode (1-4)', 'default': 4},
+    'startIsNeutral': {'type': bool, 'help': 'Start position is neutral', 'default': True},
+    
+    # Eye control settings
+    'enableLeftEye': {'type': bool, 'help': 'Enable left eye blink', 'default': True},
+    'enableRightEye': {'type': bool, 'help': 'Enable right eye blink', 'default': True},
+    'leftEyeBlinkFunction': {'type': str, 'help': 'Left eye function (clickLeft/clickCenter/clickRight/drag/doubleClick/scrollV/scrollH)', 'default': 'clickLeft'},
+    'blinkToClick': {'type': int, 'help': 'Blink to click sensitivity', 'default': 1},
+    
+    # Additional features
+    'enableKiss': {'type': bool, 'help': 'Enable kiss detection', 'default': True},
+    'mouthScroll': {'type': int, 'help': 'Enable mouth scrolling', 'default': 0},
+    
+    # Webcam configuration 
+    'webcamid': {'type': int, 'help': 'Webcam ID', 'default': 0},
+    'webcamx': {'type': int, 'help': 'Webcam width', 'default': 1024},
+    'webcamy': {'type': int, 'help': 'Webcam height', 'default': 768},
+    'webcamToRGB': {'type': bool, 'help': 'Convert to RGB', 'default': False},
+    'fps': {'type': int, 'help': 'Frames per second', 'default': 30},
+    'autoBrightness': {'type': bool, 'help': 'Auto brightness adjust', 'default': True},
+    
+    # Mouse sensitivity settings
+    'mouseSpeedX': {'type': int, 'help': 'Mouse X speed', 'default': 40},
+    'mouseSpeedY': {'type': int, 'help': 'Mouse Y speed', 'default': 40},
+    'minimalMouseMoveX': {'type': int, 'help': 'Min mouse X movement', 'default': 3},
+    'minimalMouseMoveY': {'type': int, 'help': 'Min mouse Y movement', 'default': 3},
+    'slowMouseMoveX': {'type': int, 'help': 'Slow mouse X threshold', 'default': 9},
+    'slowMouseMoveY': {'type': int, 'help': 'Slow mouse Y threshold', 'default': 9},
 }
 
 parser = argparse.ArgumentParser()
@@ -291,13 +212,12 @@ oldframeTime = 0
 fpsRealMean = args.fps
 gain = 400
 fpsBrightness = 0
+scrollValueAccumulatedY = 0
 scrollValueAccumulatedX = 0
 
-#####################
-# Mouse Control Functions
-#####################
-
+#
 # Initialize mouse controller
+#
 mouse = Controller()
 
 # Function to get screen size using xrandr
@@ -327,74 +247,48 @@ def get_screen_size():
 # Get screen size
 screen_width, screen_height = get_screen_size()
 
-# Detect Wayland
-if os.getenv('XDG_SESSION_TYPE') == 'wayland':
-    graphics_system = 'wayland'
-else:
-    graphics_system = 'xorg'
-
 # Global variables to store the last known mouse position
-last_known_x = None
-last_known_y = None
+last_known_x = screen_width / 2
+last_known_y = screen_height / 2
 
 # Variables for caching mouse position
-cached_mouse_position = (0, 0)
+cached_mouse_position = (screen_width / 2, screen_height / 2)
 last_mouse_update_time = 0
 
-# Function to get the current mouse position compatible with Xorg and Wayland
 def get_mouse_position():
-    global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
+    global cached_mouse_position, last_mouse_update_time, screen_width, screen_height
     current_time = time.time()
-    
-    # Update mouse position once per two seconds
-    if current_time - last_mouse_update_time > 2:
-        if graphics_system == 'wayland':
-            try:
-                result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
-                output = result.stdout
-                position = {}
 
-                for line in output.splitlines():
-                    if line.startswith("X="):
-                        position['X'] = int(line.split('=')[1].strip())
-                    elif line.startswith("Y="):
-                        position['Y'] = int(line.split('=')[1].strip())
-
-                if 'X' in position and 'Y' in position:
-                    last_known_x, last_known_y = position['X'], position['Y']
-                cached_mouse_position = (last_known_x, last_known_y)
-            except Exception as e:
-                print(f"Error obtaining mouse position with kdotool: {e}")
-        else:
-            last_known_x, last_known_y = mouse.position
-            cached_mouse_position = (last_known_x, last_known_y)
-        
-        last_mouse_update_time = current_time
+    # Every 4 seconds, check if the screen resolution has changed
+    if current_time - last_mouse_update_time > 4:
+        new_screen_width, new_screen_height = get_screen_size()
+        if new_screen_width != screen_width or new_screen_height != screen_height:
+            screen_width, screen_height = new_screen_width, new_screen_height
+            cached_mouse_position = (screen_width / 2, screen_height / 2)
+            last_known_x, last_known_y = screen_width / 2, screen_height / 2
+            # Move the mouse to the center of the screen
+            mouse.position = (screen_width / 2, screen_height / 2)
     
     return cached_mouse_position
 
-# Function to set the mouse position compatible with Xorg and Wayland
 def set_mouse_position(delta_x, delta_y):
     global last_known_x, last_known_y, cached_mouse_position, last_mouse_update_time
-    if graphics_system == 'wayland':
-        current_x, current_y = get_mouse_position()
-        new_x = current_x + delta_x
-        new_y = current_y + delta_y
-        if last_known_x is not None and last_known_y is not None:
-            # Ensure the new position does not exceed screen boundaries
-            new_x = max(0, min(new_x, screen_width - 1))
-            new_y = max(0, min(new_y, screen_height - 1))
-        mouse.position = (new_x, new_y)
-        
-        # Save caches changes in mouse position until detected again with kdotool
-        cached_mouse_position = (new_x, new_y)
-    else:
-        mouse.move(delta_x, delta_y)
+    current_x, current_y = get_mouse_position()
+    new_x = current_x + delta_x
+    new_y = current_y + delta_y
+    if last_known_x is not None and last_known_y is not None:
+        # Ensure the new position does not exceed screen boundaries
+        new_x = max(0, min(new_x, screen_width - 1))
+        new_y = max(0, min(new_y, screen_height - 1))
+    # Move mouse
+    mouse.position = (new_x, new_y)
 
+    # Save caches changes in mouse position
+    cached_mouse_position = (new_x, new_y)
 
-#####################
+#
 # Tooltip Code
-#####################
+#
 current_tooltip = None
 
 # Function to run Tkinter in a separate thread
@@ -494,18 +388,15 @@ mouse.position = (screen_width / 2, screen_height / 2)
 
 # Show message about ready to use (moved after tkinter thread starts)
 def show_initial_message():
-    # time.sleep(0.5)  # Wait for tkinter thread to initialize
     show_tooltip('Loading BigHeadTracker', "#000000", "#ffe600", 'center', 'center')
 
 threading.Thread(target=show_initial_message, daemon=True).start()
 
-
-#####################
+#
 # System Tray with PyQt6
-#####################
-
-from PyQt6 import QtWidgets, QtGui, QtCore
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+#
+from PyQt6 import QtGui
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, icon, parent=None):
@@ -514,25 +405,18 @@ class TrayIcon(QSystemTrayIcon):
         self.activated.connect(self.on_tray_activated)
         self.show()
 
-        # Create the menu
-        menu = QMenu(parent)
-        exit_action = menu.addAction("Exit")
-        exit_action.triggered.connect(self.on_exit)
-
-        self.setContextMenu(menu)
-
     def on_tray_activated(self, reason):
         """
         Handle activation (click) events on the tray icon.
-        Show the confirmation dialog on left-click.
+        Show confirmation dialog on both left and right click.
         """
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+        if reason in [QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.Context]:
             print("Tray icon clicked. Showing confirmation dialog.")
             threading.Thread(target=show_exit_confirmation, daemon=True).start()
 
     def on_exit(self):
         """
-        Handle the exit action from the tray menu.
+        Handle the exit action.
         """
         print("Exit action triggered. Showing confirmation dialog.")
         threading.Thread(target=show_exit_confirmation, daemon=True).start()
@@ -548,7 +432,6 @@ def show_exit_confirmation():
             running = False  # Signal the mediapipe loop to stop
             tray_icon.hide()  # Hide the tray icon
             QApplication.quit()  # Quit the PyQt application
-
 
 import cv2
 import mediapipe as mp
@@ -637,7 +520,7 @@ class VideoSource:
         cv2.resizeWindow("BigHeadTrack", webcamx, webcamy)
 
 class WebcamSource(VideoSource):
-    def __init__(self, camera_id=0, width=1024, height=768, fps=15, autofocus=0, 
+    def __init__(self, camera_id=0, width=1024, height=768, fps=30, autofocus=0, 
                  absolute_focus=75, flip=True, display=False):
         super().__init__(flip, display)
         self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
@@ -657,64 +540,88 @@ class WebcamSource(VideoSource):
         for prop, value in props.items():
             self._capture.set(prop, value)
 
-
 # Initialize Video Source
 source = WebcamSource(width=args.webcamx, height=args.webcamy, fps=args.fps, camera_id=args.webcamid)
-
 
 # Function to perform mouse actions
 def make_action(action_type):
     global action
     action = action_type
-    mouse_position = get_mouse_position()
     
-    if action_type == 'pressLeft' and not globals()['stopCursor']:
-        show_tooltip('', "#000000", "#00b600", mouse_position[0], mouse_position[1])
-        mouse.press(Button.left)
+    # Define action mappings
+    action_map = {
+        'pressLeft': {
+            'tooltip': ('', "#000000", "#00b600"),
+            'mouse_action': lambda: mouse.press(Button.left),
+            'wait': 0
+        },
+        'releaseLeft': {
+            'tooltip': ('hide', '', ''),
+            'mouse_action': lambda: mouse.release(Button.left),
+            # 'wait': int(fpsRealMean / 6)
+        },
+        'showOptions1': {
+            'tooltip': ('', "#000000", "#b6b63d"),
+            'cursor_stop': True
+        },
+        'releaseOptions1': {
+            'tooltip': ('hide', '', ''),
+            'cursor_stop': False
+        },
+        'pressRight': {
+            'tooltip': ('', "#000000", "#b6b63d"),
+            'mouse_action': lambda: mouse.press(Button.right)
+        },
+        'releaseRight': {
+            'tooltip': ('hide', '', ''),
+            'mouse_action': lambda: mouse.release(Button.right),
+            'wait': int(fpsRealMean / 2)
+        },
+        'clickLeft': {
+            'mouse_action': lambda: (mouse.press(Button.left), mouse.release(Button.left)),
+            'wait': int(fpsRealMean / 2)
+        },
+        'clickRight': {
+            'mouse_action': lambda: (mouse.press(Button.right), mouse.release(Button.right)),
+            'wait': int(fpsRealMean / 2)
+        },
+        'enableCursor': {
+            'cursor_stop': False
+        },
+        'releaseScrollV': {
+            'tooltip': ('', "#000000", "#25c0ab"),
+            'scroll_action': True
+        }
+    }
 
-    elif action_type == 'releaseLeft' and not globals()['stopCursor']:
-        mouse.release(Button.left)
-        show_tooltip('hide', "#000000", "#00b600", mouse_position[0], mouse_position[1])
-        globals()['waitFrames'] = int(fpsRealMean / 6)
+    if action_type not in action_map:
+        return
 
-    elif action_type == 'showOptions1':
-        show_tooltip('', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
-        globals()['stopCursor'] = True
+    action_info = action_map[action_type]
+    mouse_position = get_mouse_position()
 
-    elif action_type == 'releaseOptions1':
-        show_tooltip('hide', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
-        globals()['stopCursor'] = False
+    # Handle tooltip
+    if 'tooltip' in action_info and not globals()['stopCursor']:
+        show_tooltip(*action_info['tooltip'], mouse_position[0], mouse_position[1])
 
-    elif action_type == 'pressRight' and not globals()['stopCursor']:
-        show_tooltip('', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
-        mouse.press(Button.right)
+    # Handle mouse actions
+    if 'mouse_action' in action_info and not globals()['stopCursor']:
+        action_info['mouse_action']()
 
-    elif action_type == 'releaseRight' and not globals()['stopCursor']:
-        show_tooltip('hide', "#000000", "#b6b63d", mouse_position[0], mouse_position[1])
-        mouse.release(Button.right)
-        globals()['waitFrames'] = int(fpsRealMean / 2)
+    # Handle cursor stop
+    if 'cursor_stop' in action_info:
+        globals()['stopCursor'] = action_info['cursor_stop']
 
-    elif action_type == 'clickLeft':
-        mouse.press(Button.left)
-        mouse.release(Button.left)
-        globals()['waitFrames'] = int(fpsRealMean / 2)
+    # Handle wait frames
+    if 'wait' in action_info:
+        globals()['waitFrames'] = action_info['wait']
 
-    elif action_type == 'clickRight':
-        mouse.press(Button.right)
-        mouse.release(Button.right)
-        globals()['waitFrames'] = int(fpsRealMean / 2)
-
-    elif action_type == 'enableCursor':
-        globals()['stopCursor'] = False
-
-    elif action_type == 'pressScrollV':
-        show_tooltip('', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
-        # globals()['waitFrames'] = int(fpsRealMean / 2)
-    elif action_type == 'releaseScrollV':
+    # Handle scroll action
+    if 'scroll_action' in action_info:
         if globals()['stopCursor']:
             globals()['stopCursor'] = False
-            globals()['action'] == ''
-            show_tooltip('hide', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
+            globals()['action'] = ''
+            show_tooltip('hide', '', '', '', '')
             globals()['waitFrames'] = int(fpsRealMean / 2)
         else:
             show_tooltip('', "#000000", "#25c0ab", mouse_position[0], mouse_position[1])
@@ -722,13 +629,13 @@ def make_action(action_type):
             globals()['action'] = 'scrollV'
             globals()['waitFrames'] = int(fpsRealMean / 2)
 
-    elif action_type == 'toggleKeyboard':
+    # Handle keyboard toggle separately
+    if action_type == 'toggleKeyboard':
         subprocess.run(["qdbus", "org.onboard.Onboard", "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.ToggleVisible"])
 
-#####################
+#
 # Distance Calculation Functions
-#####################
-
+#
 def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
     # Get the X and Y coordinates of the top and bottom points
     top_pointsX = np.array([landmarks[index][0] for index in top_indices])
@@ -766,7 +673,7 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
     var_name_mean = f"{var_name}Mean"
     var_name_normalized = f"{var_name}Normalized"
     var_name_confirmation = f"{var_name}Confirmation"
-    var_name_clicked = f"{var_name}Clicked"
+    var_name_clicked = f"{var_name}clicked"
 
     if var_name_old not in globals():
         globals()[var_name_mean] = distance
@@ -775,12 +682,15 @@ def calculate_distance2D(landmarks, var_name, top_indices, bottom_indices):
         globals()[var_name_confirmation] = 1
         globals()[var_name_clicked] = False
 
+#
+# Verify false click
+#
 def verify_false_click(var_name, distance_value, confirm_value, action_start, action_end):
     var_confirmation = globals()[f"{var_name}Confirmation"]
     distance = globals()[var_name]
 
     if globals()['confirmationTimeout'] == 0 and not globals()['clicked']:
-        globals()[f"{var_name}Old"] = (globals()[f"{var_name}Old"] * fpsRealMean / 2 + distance) / (fpsRealMean / 2 + 1)
+        globals()[f"{var_name}Old"] = (globals()[f"{var_name}Old"] * fpsRealMean + distance) / (fpsRealMean + 1)
 
     globals()[f"{var_name}Mean"] = (distance + globals()[f"{var_name}Mean"]) / 2
     globals()[f"{var_name}Normalized"] = (distance + globals()[f"{var_name}Old"]) / 2
@@ -788,12 +698,11 @@ def verify_false_click(var_name, distance_value, confirm_value, action_start, ac
     var_mean = globals()[f"{var_name}Mean"]
     var_old = globals()[f"{var_name}Old"]
     var_normalized = globals()[f"{var_name}Normalized"]
+    if not globals()[f"{var_name}clicked"] and not globals()['clicked'] and eyesOpen >= 3 and waitFrames == 0 or (var_name == 'kiss'):
+        if eyesOpen and distance < var_old * distance_value and not standByClick and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (var_name == 'kiss' and distance < var_old * distance_value)):
 
-    if not globals()[f"{var_name}Clicked"] and not globals()['clicked'] and eyesOpen >= 3 and waitFrames == 0:
-        if eyesOpen and distance < var_old * distance_value and not standByClick and ((mousePointXabs < args.slowMouseMoveX and mousePointYabs < args.slowMouseMoveY) or (var_name == 'kiss')):
-            
             globals()[f"{var_name}Confirmation"] += 1
-            globals()['confirmationTimeout'] = int(fpsRealMean / 3) + confirm_value
+            globals()['confirmationTimeout'] = confirm_value
             var_confirmation += 1
 
             if ((var_confirmation >= 1 + confirm_value and eyesOpen == 10) or 
@@ -802,32 +711,34 @@ def verify_false_click(var_name, distance_value, confirm_value, action_start, ac
                 
                 if action_start != 'wait':
                     make_action(action_start)
+                    if var_name == 'kiss':
+                        mouse_position = get_mouse_position()
+                        show_tooltip('', "#000000", "#ff0000", mouse_position[0], mouse_position[1])
                 
                 globals()['clicked'] = True
-                globals()[f"{var_name}Clicked"] = True
+                globals()[f"{var_name}clicked"] = True
 
-    if globals()[f"{var_name}Clicked"]:
+    if globals()[f"{var_name}clicked"]:
         if var_mean > var_old * distance_value and distance > var_old * distance_value:
             globals()[f"{var_name}Confirmation"] = 1
-            globals()[f"{var_name}Clicked"] = False
+            globals()[f"{var_name}clicked"] = False
             globals()['clicked'] = False
             make_action(action_end)
 
     if eyesOpen == 0:
         globals()[f"{var_name}Confirmation"] = 1
 
-######################
+#
 # Facemesh Parameters
-######################
+#
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 mp_face_mesh_connections = mp.solutions.face_mesh_connections
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=0, color=(0, 255, 0))
 
-
-#####################
+#
 # Facemesh ROI Function for auto adjusting brightness
-#####################
+#
 def get_eyes_roi(frame, landmarks_obj):
     height, width, _ = frame.shape
     left_eye_indices = [224, 193, 128, 229]
@@ -865,16 +776,15 @@ def get_eyes_roi(frame, landmarks_obj):
     else:
         return None
 
-#####################
+#
 # Mediapipe Processing
-#####################
-
+#
 def mediapipe_processing():
     global running, frameNumber, zeroPointX2, zeroPointY2, waitFrames, confirmationTimeout, eyesOpen, clicked
     global mousePointXabsOld, mousePointYabsOld, mousePointXabs, mousePointYabs, slowMove, mousePositionFrameX, mousePositionFrameY
     global maybeScreenLimitX, maybeScreenLimitY, action
     global oldframeTime, fpsReal, fpsRealMean
-    global fpsBrightness, gain, scrollValueAccumulatedX  # Add any other globals you modify here
+    global fpsBrightness, gain, scrollValueAccumulatedY, scrollValueAccumulatedX  # Add any other globals you modify here
     
     oldframeTime = time.time()  # Initialize oldframeTime
     
@@ -892,9 +802,9 @@ def mediapipe_processing():
             except StopIteration:
                 break
 
-            ##############################
+            #
             # Auto adjust Brightness, Contrast, Gamma
-            ##############################
+            #
             if args.autoBrightness:
                 fpsBrightness += 1
 
@@ -927,28 +837,30 @@ def mediapipe_processing():
                 fpsRealMean = (fpsReal + (fpsRealMean * 10)) / 11
             oldframeTime = frameTime
 
-            ############################
+            #
             # Process Facemesh results
-            ############################
+            #
             results = face_mesh.process(frame_rgb)
             if results.multi_face_landmarks:
-                ############################
-                # Create landmarks
-                ############################
+                #
+                # Create landmarks array and update counters
+                #
                 face_landmarks = results.multi_face_landmarks[0]
+                # Convert landmarks to numpy array in one operation
                 landmarks = np.array([(lm.x, lm.y, lm.z) for lm in face_landmarks.landmark])
-
+                
+                # Update frame counters efficiently
                 if frameNumber < fpsRealMean:
                     frameNumber += 1
                 else:
-                    if waitFrames > 0:
-                        waitFrames -= 1
-                    if confirmationTimeout > 0:
-                        confirmationTimeout -= 1
+                    # Combine counter decrements into single operation
+                    if waitFrames > 0 or confirmationTimeout > 0:
+                        waitFrames = max(0, waitFrames - 1)
+                        confirmationTimeout = max(0, confirmationTimeout - 1)
 
-                    ##############################################
+                    #
                     # Mouse movement detection mode 1
-                    ##############################################
+                    #
                     if args.mouseDetectionMode == 1:
                         mouseMoveX = np.linalg.norm(landmarks[6][0] - landmarks[6][2]) * args.mouseSpeedX * 10
                         mouseMoveY = np.linalg.norm(landmarks[6][1] - landmarks[6][2]) * args.mouseSpeedY * 10
@@ -993,15 +905,15 @@ def mediapipe_processing():
 
                                 mousePositionFrameX, mousePositionFrameY = mouse_position
 
-                    ##############################################
+                    #
                     # Mouse movement detection mode 2
-                    ##############################################
+                    #
                     elif args.mouseDetectionMode == 2:
                         mouseMoveX = (math.atan((landmarks[1][0] + ((landmarks[454][0] + landmarks[473][0] + landmarks[152][0]) / 3))) * 3)
-                        mouseMoveX = mouseMoveX ** 4 * 4
+                        mouseMoveX = mouseMoveX ** 4 * 3
 
                         mouseMoveY = (math.atan((landmarks[1][1] + ((landmarks[152][1] + landmarks[473][1] + landmarks[34][1]) / 3))) * 3)
-                        mouseMoveY = mouseMoveY ** 4 * 4
+                        mouseMoveY = mouseMoveY ** 4 * 3
 
                         if zeroPointX2 is None:
                             zeroPointX = mouseMoveX
@@ -1043,14 +955,20 @@ def mediapipe_processing():
 
                                 mousePositionFrameX, mousePositionFrameY = mouse_position
 
-                    ##############################################
-                    # Check if using the right eye
-                    ##############################################
+                    #
+                    # Process eye and kiss detection
+                    #
                     if args.enableRightEye:
+                        # Calculate using 2D information about 3 top points and 3 bottom points of the eyes, the function will generate 4 global variables
+                        # The values passed are, variable name, top points, bottom points, distance between points to consider closed
+                        # RightEye rightEyeOld rightEyeNomalized  rightEyeMean
                         calculate_distance2D(landmarks, 'overRightEye', [258, 257, 259], [254, 253, 252])
                         calculate_distance2D(landmarks, 'rightEye', [385, 386, 387], [373, 374, 380])
 
                     if args.enableLeftEye:
+                        # Calculate using 2D information about 3 top points and 3 bottom points of the eyes, the function will generate 4 global variables
+                        # The values passed are, variable name, top points, bottom points, distance between points to consider closed
+                        # leftEye leftEyeOld leftEyeNomalized  leftEyeMean
                         calculate_distance2D(landmarks, 'overLeftEye', [28, 27, 29], [22, 23, 24])
                         calculate_distance2D(landmarks, 'leftEye', [158, 159, 160], [153, 145, 144])
 
@@ -1058,73 +976,88 @@ def mediapipe_processing():
                         calculate_distance2D(landmarks, 'irisDistance', [469], [476])
                         calculate_distance2D(landmarks, 'kiss', [178, 80, 41], [318, 415, 272])
 
-                    # Check eye conditions to set eyesOpen state
-                    if ((leftEye < leftEyeMean * 0.68 and rightEye < rightEyeMean * 0.68) or 
-                        (leftEye < leftEyeNormalized * 0.4 and rightEye < rightEyeNormalized * 0.4)) and not clicked:
-                        eyesOpen = 0
-                        waitFrames = int(fpsRealMean)
-                    else:
-                        if eyesOpen == 0:
-                            eyesOpen = 3
-
-                        if eyesOpen > 0 and leftEye > leftEyeNormalized * 0.8 and rightEye > rightEyeNormalized * 0.8 and not clicked:
-                            if (leftEye > leftEyeOld * 0.85 and rightEye > rightEyeOld * 0.85 and 
-                                mousePointXabs <= 1 and mousePointYabs <= 1 and 
-                                mousePointXabsOld <= 1 and mousePointYabsOld <= 1):
-                                eyesOpen = 10
-                            else:
-                                eyesOpen = 5
-
-                            if ((leftEye < leftEyeNormalized * 0.7 and rightEye < rightEyeNormalized * 0.7 and not clicked) or 
-                                (mousePointYabsOld > mousePointYabs and not clicked) or 
-                                (mousePointXabsOld > mousePointXabs and not clicked)):
+                    # Check eye conditions and update eyesOpen state
+                    if not clicked:
+                        if ((leftEye < leftEyeMean * 0.68 and rightEye < rightEyeMean * 0.68) or 
+                            (leftEye < leftEyeNormalized * 0.4 and rightEye < rightEyeNormalized * 0.4)):
+                            eyesOpen = 0
+                            waitFrames = int(fpsRealMean)
+                        else:
+                            if eyesOpen == 0:
                                 eyesOpen = 3
+                            elif leftEye > leftEyeNormalized * 0.8 and rightEye > rightEyeNormalized * 0.8:
+                                if (leftEye > leftEyeOld * 0.85 and rightEye > rightEyeOld * 0.85 and 
+                                    all(x <= 1 for x in [mousePointXabs, mousePointYabs, mousePointXabsOld, mousePointYabsOld])):
+                                    eyesOpen = 10
+                                else:
+                                    eyesOpen = 5
 
-                    if args.enableRightEye and globals()['action'] != 'scrollV':
-                        verify_false_click('rightEye', 0.7, 0, 'pressRight', 'releaseRight')
+                                if ((leftEye < leftEyeNormalized * 0.7 and rightEye < rightEyeNormalized * 0.7) or 
+                                    mousePointYabsOld > mousePointYabs or mousePointXabsOld > mousePointXabs):
+                                    eyesOpen = 3
 
-                    if args.enableLeftEye and globals()['action'] != 'scrollV':
-                        verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft')
+                    # Process click and scroll actions
+                    current_action = globals()['action']
+                    if current_action != 'scrollV':
+                        if args.enableRightEye:
+                            # Values for verify_false_click: var_name, distance_value, confirm_value, action_start, action_end
+                            verify_false_click('rightEye', 0.7, 1, 'pressRight', 'releaseRight')
+                        if args.enableLeftEye:
+                            verify_false_click('leftEye', 0.7, 0, 'pressLeft', 'releaseLeft')
 
                     if args.enableKiss:
-                        verify_false_click('kiss', 0.7, 1, 'pressScrollV', 'releaseScrollV')
+                        verify_false_click('kiss', 0.7, 10, 'pressScrollV', 'releaseScrollV')
 
-                    if action == 'scrollV' and mousePointYabs > args.minimalMouseMoveY:
-                        print(f"mousepoint {mousePointYabs}")
-                        print(f"args.minimalMouseMoveY {args.minimalMouseMoveY}")
-
-                        scrollValueX = mousePointYApply / fpsRealMean
-                        scrollValueAccumulatedX += scrollValueX
-
-                        if scrollValueAccumulatedX > 1 or scrollValueAccumulatedX < -1:
-                            mouse.scroll(0, int(-scrollValueAccumulatedX))
+                    # Handle scroll and options display
+                    if current_action == 'scrollV' and (mousePointYabs > args.minimalMouseMoveY or mousePointXabs > args.minimalMouseMoveX):
+                        global scrollValueAccumulatedY
+                        scrollValueAccumulatedY += mousePointYApply / fpsRealMean
+                        scrollValueAccumulatedX += mousePointXApply / fpsRealMean
+                        if abs(scrollValueAccumulatedY) >= 1 and abs(scrollValueAccumulatedX) >= 1:
+                            mouse.scroll(int(scrollValueAccumulatedX), int(-scrollValueAccumulatedY))
+                            scrollValueAccumulatedY = 0
                             scrollValueAccumulatedX = 0
-                    elif action == 'showOptions1':
+                        if abs(scrollValueAccumulatedY) >= 1:
+                            mouse.scroll(0, int(-scrollValueAccumulatedY))
+                            scrollValueAccumulatedY = 0
+                        if abs(scrollValueAccumulatedX) >= 1:
+                            mouse.scroll(int(scrollValueAccumulatedX), 0)
+                            scrollValueAccumulatedX = 0
+                            
+                    elif current_action == 'showOptions1':
                         mouse_position = get_mouse_position()
                         if mousePointXApply < -args.minimalMouseMoveX * 3:
-                            show_tooltip('Double Click', "#000000", "#ff00ff", mouse_position[0], mouse_position[1])
+                            tooltip_text = 'Double Click'
+                            tooltip_color = "#ff00ff"
                         elif mousePointXApply > args.minimalMouseMoveX * 3:
-                            show_tooltip('Hold', "#000000", "#afaaaf", mouse_position[0], mouse_position[1])
+                            tooltip_text = 'Hold'
+                            tooltip_color = "#afaaaf"
                         elif mousePointYApply > args.minimalMouseMoveY * 2:
-                            show_tooltip('Middle Button', "#000000", "#4440ff", mouse_position[0], mouse_position[1])
+                            tooltip_text = 'Middle Button'
+                            tooltip_color = "#4440ff"
                         elif mousePointYApply < -args.minimalMouseMoveY * 2:
-                            show_tooltip('Show Keyboard', "#000000", "#626634", mouse_position[0], mouse_position[1])
-                        elif action == 'pressLeft':
-                            show_tooltip('', "#000000", "#008eff", mouse_position[0], mouse_position[1])
+                            tooltip_text = 'Show Keyboard'
+                            tooltip_color = "#626634"
+                        elif current_action == 'pressLeft':
+                            tooltip_text = ''
+                            tooltip_color = "#008eff"
+                        else:
+                            return
+                        show_tooltip(tooltip_text, "#000000", tooltip_color, mouse_position[0], mouse_position[1])
 
-                    ##############################
+                    #
                     # Display information on screen
-                    ##############################
+                    #
                     if args.view != 0:
-                        ##############################
+                        #
                         # Prepare the display frame
-                        ##############################
+                        #
                         if args.view == 2:
                             avatar = np.zeros(
                                 shape=[args.webcamy, args.webcamx, 3], dtype=np.uint8)
                             showInCv = avatar
                         else:
-                            showInCv = frame.copy()
+                            showInCv = frame_rgb.copy() if args.webcamToRGB else frame_rgb
 
                         cv2.rectangle(showInCv, (0, 0), (300, 300), (0, 0, 0), -1)
 
@@ -1154,58 +1087,71 @@ def mediapipe_processing():
                             cv2.line(showInCv, (int(args.webcamx / 2) + 1, 0), (int(args.webcamx / 2) + 1, args.webcamx), (0, 0, 0), 1)
 
 
-                    ##############################
+                    #
                     # Show points on avatar
-                    ##############################
+                    #
                     if args.view == 2:
-                        # Left Eye Upper0 / Right Eye Lower0
-                        for id in [246, 161, 160, 159, 158, 157, 173, 33, 7, 163, 144, 145, 153, 154, 155, 133, 263, 249, 390, 373, 374, 380, 381, 382, 362, 466, 388, 387, 386, 385, 384, 398]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (155, 155, 155), 1)
+                        # Define point groups with their colors
+                        point_groups = {
+                            'eye_outline': {
+                                'points': [246, 161, 160, 159, 158, 157, 173, 33, 7, 163, 144, 145, 153, 154, 155, 133, 
+                                         263, 249, 390, 373, 374, 380, 381, 382, 362, 466, 388, 387, 386, 385, 384, 398],
+                                'color': (155, 155, 155)
+                            },
+                            'left_eye_top': {
+                                'points': [158, 159, 160],
+                                'color': (255, 0, 255)
+                            },
+                            'left_eye_bottom': {
+                                'points': [144, 145, 163],
+                                'color': (0, 255, 255)
+                            },
+                            'right_eye_top': {
+                                'points': [385, 386, 387],
+                                'color': (255, 0, 255)
+                            },
+                            'right_eye_bottom': {
+                                'points': [373, 374, 380],
+                                'color': (0, 255, 255)
+                            },
+                            'nose_iris': {
+                                'points': [1, 468, 473],
+                                'color': (55, 255, 55)
+                            },
+                            'face_oval': {
+                                'points': [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 
+                                         378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 
+                                         21, 54, 103, 67, 109, 10],
+                                'color': (0, 255, 0)
+                            },
+                            'lips_top_inner': {
+                                'points': [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308],
+                                'color': (255, 0, 255)
+                            },
+                            'lips_bottom_inner': {
+                                'points': [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308],
+                                'color': (0, 255, 255)
+                            },
+                            'lips_top_outer': {
+                                'points': [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291],
+                                'color': (255, 0, 255)
+                            },
+                            'lips_bottom_outer': {
+                                'points': [146, 91, 181, 84, 17, 314, 405, 321, 375, 291],
+                                'color': (0, 255, 255)
+                            }
+                        }
 
-                        # Left Eye Top
-                        for id in [158, 159, 160]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
+                        # Draw all points in a single loop
+                        for group in point_groups.values():
+                            for id in group['points']:
+                                x = int(landmarks[id][0] * args.webcamx)
+                                y = int(landmarks[id][1] * args.webcamy)
+                                cv2.circle(showInCv, (x, y), 1, group['color'], 1)
 
-                        # Left Eye Bottom
-                        for id in [144, 145, 163]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
-
-                        # Right Eye Top
-                        for id in [385, 386, 387]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
-
-                        # Right Eye Bottom
-                        for id in [373, 374, 380]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
-
-                        # Nose and iris
-                        for id in [1, 468, 473]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (55, 255, 55), 1)
-
-                        # Face Oval
-                        for id in [10, 338, 338, 297, 297, 332, 332, 284, 284, 251, 251, 389, 389, 356, 356, 454, 454, 323, 323, 361, 361, 288, 288, 397, 397, 365, 365, 379, 379, 378, 378, 400, 400, 377, 377, 152, 152, 148, 148, 176, 176, 149, 149, 150, 150, 136, 136, 172, 172, 58, 58, 132, 132, 93, 93, 234, 234, 127, 127, 162, 162, 21, 21, 54, 54, 103, 103, 67, 67, 109, 109, 10]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 0), 1)
-
-                        # Lips Top Inner
-                        for id in [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
-
-                        # Lips Bottom Inner
-                        for id in [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
-
-
-                        # Lips Top Outer
-                        for id in [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (255, 0, 255), 1)
-
-                        # Lips Bottom Outer
-                        for id in [146, 91, 181, 84, 17, 314, 405, 321, 375, 291]:
-                            cv2.circle(showInCv, (int(landmarks[id][0] * args.webcamx), int(landmarks[id][1] * args.webcamy)), 1, (0, 255, 255), 1)
-
-                        ##############################
+                        #
                         # Draw facemesh landmarks
-                        ##############################
+                        #
                         mp_drawing.draw_landmarks(
                             image=showInCv,
                             landmark_list=face_landmarks,
@@ -1215,9 +1161,9 @@ def mediapipe_processing():
                         )
                         source.show(showInCv, args.webcamx, args.webcamy)
 
-                        ##############################
+                        #
                         # Plot graphic
-                        ##############################
+                        #
                         if args.plot == 1:  # Plot the left eye
                             if countFrames == 10:
                                 import matplotlib.pyplot as plt  # to plot graphics
@@ -1252,29 +1198,24 @@ def mediapipe_processing():
 # Initialize PyQt6 Application for System Tray
 app_qt = QApplication(sys.argv)
 
-# Load an icon image (ensure 'icon.svg' exists in your working directory)
-icon_path = resource_path("icon.png")  # Replace with your icon path
+# Load icon more efficiently
+icon_path = resource_path("icon.png")
 if not os.path.exists(icon_path):
-    # Create a simple red square as a placeholder if the icon does not exist
-    placeholder = Image.new('RGB', (64, 64), color = 'red')
-    placeholder.save(icon_path)
+    # Create minimal placeholder icon
+    Image.new('RGB', (32, 32), 'red').save(icon_path)
 
-icon_qt = QtGui.QIcon(icon_path)
+# Create tray icon once
+tray_icon = TrayIcon(QtGui.QIcon(icon_path))
 
-# Create and display the tray icon
-tray_icon = TrayIcon(icon_qt)
-
-# Global flag to control the application's running state
+# Global control flag
 running = True
 
-# Start the mediapipe processing in a separate thread
+# Start mediapipe thread
 mediapipe_thread = threading.Thread(target=mediapipe_processing, daemon=True)
 mediapipe_thread.start()
 
-# Show message about ready to use
+# Show ready message
 show_tooltip('Ready', "#000000", "#00b600", 'center', screen_height / 2)
 
-#####################
-# Start the PyQt6 Event Loop
-#####################
+# Start event loop
 sys.exit(app_qt.exec())
