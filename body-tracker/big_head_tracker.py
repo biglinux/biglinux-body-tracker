@@ -427,8 +427,10 @@ def show_exit_confirmation():
 import cv2
 import mediapipe as mp
 from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates
+import sys
 
 # Video Source Classes
+
 class VideoSource:
     def __init__(self, flip=False, display=False, dtype=np.uint8):
         self._name = "VideoSource"
@@ -509,6 +511,39 @@ class VideoSource:
             self._window_initialized = True
         cv2.imshow("BigHeadTrack", frame)
         cv2.resizeWindow("BigHeadTrack", webcamx, webcamy)
+
+class WebcamSource(VideoSource):
+    def __init__(self, camera_id=0, width=1024, height=768, fps=30, autofocus=0, 
+                 absolute_focus=75, flip=True, display=False):
+        super().__init__(flip, display)
+        
+        # Determine the appropriate backend based on the operating system
+        platform = sys.platform
+        if platform.startswith('linux'):
+            backend = cv2.CAP_V4L2
+        elif platform == 'darwin':
+            backend = cv2.CAP_AVFOUNDATION
+        elif platform.startswith('win'):
+            backend = cv2.CAP_DSHOW
+        else:
+            backend = cv2.CAP_ANY  # Default backend
+
+        self._capture = cv2.VideoCapture(camera_id, backend)
+        
+        # Set camera properties in a cross-platform manner
+        props = {
+            cv2.CAP_PROP_FRAME_WIDTH: width,
+            cv2.CAP_PROP_FRAME_HEIGHT: height,
+            cv2.CAP_PROP_GAIN: 0,
+            cv2.CAP_PROP_EXPOSURE: 1 / (fps / 10000),
+            cv2.CAP_PROP_FOURCC: cv2.VideoWriter_fourcc(*"MJPG"),
+            cv2.CAP_PROP_FPS: fps,
+            cv2.CAP_PROP_AUTO_EXPOSURE: 3,
+            cv2.CAP_PROP_FOCUS: absolute_focus / 255
+        }
+
+        for prop, value in props.items():
+            self._capture.set(prop, value)
 
 class WebcamSource(VideoSource):
     def __init__(self, camera_id=0, width=1024, height=768, fps=30, autofocus=0, 
