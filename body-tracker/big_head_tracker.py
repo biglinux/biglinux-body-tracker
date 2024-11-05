@@ -217,12 +217,31 @@ scrollValueAccumulatedY = 0
 scrollValueAccumulatedX = 0
 last_mouse_update_time = 0
 
+# Return scale of screen
+
+def get_screen_scale():
+    if os.getenv('XDG_SESSION_TYPE') == 'wayland' and os.getenv('XDG_SESSION_DESKTOP') == 'KDE':
+        try:
+            # Check if qdbus exists
+            if subprocess.run(['which', 'qdbus'], capture_output=True).returncode == 0:
+                # Get scale from KDE KWin
+                result = subprocess.run('qdbus org.kde.KWin /KWin org.kde.KWin.supportInformation | grep "^Scale:" | awk "{print \$2}"', capture_output=True, shell=True, text=True)
+                if result.returncode == 0 and result.stdout.strip():
+                    return float(result.stdout.strip())
+        except Exception as e:
+            print(f"Error getting screen scale: {e}")
+    else:
+        scale = 1
+    return scale
+
+
+
 #
 # Initialize mouse controller
 #
 mouse = Controller()
 
-# Function to get total screen size across all monitors using screeninfo
+# Function to get total screen size across all monitors using screeninfo and adjust for scaling
 def get_screen_size():
     try:
         monitors = get_monitors()
@@ -232,6 +251,13 @@ def get_screen_size():
         max_y = max(monitor.y + monitor.height for monitor in monitors)
         total_width = max_x - min_x
         total_height = max_y - min_y
+
+        scale = get_screen_scale()
+
+        # Adjust screen size based on scaling factor
+        total_width = int(total_width / scale)
+        total_height = int(total_height / scale)
+
         return total_width, total_height
     except Exception as e:
         print(f"Error obtaining screen resolution: {e}")
@@ -247,7 +273,6 @@ last_known_y = screen_height / 2
 # Variables for caching mouse position
 cached_mouse_position = (screen_width / 2, screen_height / 2)
 last_mouse_update_time = int(time.time())
-
 
 def get_mouse_position():
     global cached_mouse_position, screen_width, screen_height, last_mouse_update_time
