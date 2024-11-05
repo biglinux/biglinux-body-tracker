@@ -5,7 +5,7 @@ pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('any')
 license=('GPL')
-depends=('tk' 'xorg-xrandr')
+depends=('tk')
 url="https://github.com/biglinux/biglinux-body-tracker"
 pkgdesc="Use the webcam to control your computer"
 # Use latest release as source
