@@ -216,30 +216,33 @@ fpsBrightness = 0
 scrollValueAccumulatedY = 0
 scrollValueAccumulatedX = 0
 last_mouse_update_time = 0
-
-# Return scale of screen
-
-def get_screen_scale():
-    if os.getenv('XDG_SESSION_TYPE') == 'wayland' and os.getenv('XDG_SESSION_DESKTOP') == 'KDE':
-        try:
-            # Check if qdbus exists
-            if subprocess.run(['which', 'qdbus'], capture_output=True).returncode == 0:
-                # Get scale from KDE KWin
-                result = subprocess.run('qdbus org.kde.KWin /KWin org.kde.KWin.supportInformation | grep "^Scale:" | awk "{print \$2}"', capture_output=True, shell=True, text=True)
-                if result.returncode == 0 and result.stdout.strip():
-                    return float(result.stdout.strip())
-        except Exception as e:
-            print(f"Error getting screen scale: {e}")
-    else:
-        scale = 1
-    return scale
-
-
+number_monitors = 1
 
 #
 # Initialize mouse controller
 #
 mouse = Controller()
+
+# Detect Wayland
+if os.getenv('XDG_SESSION_TYPE') == 'wayland':
+    graphics_system = 'wayland'
+elif os.getenv('XDG_SESSION_DESKTOP') == 'KDE':
+    graphics_system = 'waylandKDE'
+else:
+    graphics_system = 'x11'    
+
+def get_screen_scale():
+    if graphics_system == 'waylandKDE':
+        try:
+            # Get scale from KDE KWin
+            result = subprocess.run('qdbus org.kde.KWin /KWin org.kde.KWin.supportInformation | grep -m1 "^Scale:" | awk "{print \$2}"', capture_output=True, shell=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                return float(result.stdout.strip())
+        except Exception as e:
+            print(f"Error getting screen scale: {e}")
+    else:
+        scale = 1
+    return scale
 
 # Function to get total screen size across all monitors using screeninfo and adjust for scaling
 def get_screen_size():
@@ -251,6 +254,11 @@ def get_screen_size():
         max_y = max(monitor.y + monitor.height for monitor in monitors)
         total_width = max_x - min_x
         total_height = max_y - min_y
+        number_monitors = len(monitors)
+        if number_monitors == 0:
+            number_monitors = 1  # Fallback to single monitor if detection fails
+        # export number_monitors to global scope
+        globals()['number_monitors'] = number_monitors
 
         scale = get_screen_scale()
 
@@ -275,18 +283,42 @@ cached_mouse_position = (screen_width / 2, screen_height / 2)
 last_mouse_update_time = int(time.time())
 
 def get_mouse_position():
-    global cached_mouse_position, screen_width, screen_height, last_mouse_update_time
+    global last_known_x, last_known_y, cached_mouse_position, screen_width, screen_height, last_mouse_update_time
     current_time = int(time.time())
     # Every 3 seconds, check if the screen resolution has changed
     if current_time - last_mouse_update_time > 3:
         last_mouse_update_time = current_time
         new_screen_width, new_screen_height = get_screen_size()
-        print(new_screen_width, new_screen_height)
         if new_screen_width != screen_width or new_screen_height != screen_height:
             screen_width, screen_height = new_screen_width, new_screen_height
             cached_mouse_position = (screen_width / 2, screen_height / 2)
             # Move the mouse to the center of the screen
             mouse.position = (screen_width / 2, screen_height / 2)
+
+    if graphics_system == 'waylandKDE':
+        # Check for multiple screens
+        if globals()['number_monitors'] == 1:
+            return cached_mouse_position  # Return cached position if not enough monitors
+        try:
+            result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
+            output = result.stdout
+            position = {}
+
+            for line in output.splitlines():
+                if line.startswith("X="):
+                    position['X'] = int(line.split('=')[1].strip())
+                elif line.startswith("Y="):
+                    position['Y'] = int(line.split('=')[1].strip())
+
+            if 'X' in position and 'Y' in position:
+                last_known_x, last_known_y = position['X'], position['Y']
+            cached_mouse_position = (last_known_x, last_known_y)
+        except Exception as e:
+            print(f"Error obtaining mouse position with kdotool: {e}")
+    elif graphics_system == 'x11':
+        # In Xorg use simple way
+        last_known_x, last_known_y = mouse.position
+        cached_mouse_position = (last_known_x, last_known_y)
     
     return cached_mouse_position
 
@@ -299,9 +331,8 @@ def set_mouse_position(delta_x, delta_y):
         # Ensure the new position does not exceed screen boundaries
         new_x = max(0, min(new_x, screen_width - 1))
         new_y = max(0, min(new_y, screen_height - 1))
-    # Move mouse
-    mouse.position = (new_x, new_y)
 
+    mouse.position = (new_x, new_y)
     # Save caches changes in mouse position
     cached_mouse_position = (new_x, new_y)
 
