@@ -11,15 +11,15 @@ import numpy as np
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image
-from pynput.mouse import Button, Controller
+import uinput  # Added import for uinput
 
-# Used to found files after use pyinstaller
+# Used to find files after use pyinstaller
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
-
+    
     return os.path.join(base_path, relative_path)
 
 # Configuration Functions
@@ -219,9 +219,17 @@ last_mouse_update_time = 0
 number_monitors = 1
 
 #
-# Initialize mouse controller
+# Initialize uinput device
 #
-mouse = Controller()
+device = uinput.Device([
+    uinput.REL_X,
+    uinput.REL_Y,
+    uinput.REL_WHEEL,      # For vertical scrolling
+    uinput.REL_HWHEEL,     # For horizontal scrolling
+    uinput.BTN_LEFT,
+    uinput.BTN_RIGHT,
+    uinput.BTN_MIDDLE,
+])
 
 # Detect Wayland
 if os.getenv('XDG_SESSION_TYPE') == 'wayland':
@@ -293,7 +301,7 @@ def get_mouse_position():
             screen_width, screen_height = new_screen_width, new_screen_height
             cached_mouse_position = (screen_width / 2, screen_height / 2)
             # Move the mouse to the center of the screen
-            mouse.position = (screen_width / 2, screen_height / 2)
+            set_mouse_position(int(screen_width / 2 - cached_mouse_position[0]), int(screen_height / 2 - cached_mouse_position[1]))
 
     if graphics_system == 'waylandKDE':
         # Check for multiple screens
@@ -317,24 +325,36 @@ def get_mouse_position():
             print(f"Error obtaining mouse position with kdotool: {e}")
     elif graphics_system == 'x11':
         # In Xorg use simple way
-        last_known_x, last_known_y = mouse.position
-        cached_mouse_position = (last_known_x, last_known_y)
+        # Since uinput handles relative movements, getting absolute position isn't straightforward
+        # Here we just return the cached position
+        pass
     
     return cached_mouse_position
 
 def set_mouse_position(delta_x, delta_y):
     global last_known_x, last_known_y, cached_mouse_position
-    current_x, current_y = get_mouse_position()
-    new_x = current_x + delta_x
-    new_y = current_y + delta_y
-    if last_known_x is not None and last_known_y is not None:
-        # Ensure the new position does not exceed screen boundaries
-        new_x = max(0, min(new_x, screen_width - 1))
-        new_y = max(0, min(new_y, screen_height - 1))
+    # Emit relative movement events
+    device.emit(uinput.REL_X, delta_x, syn=False)
+    device.emit(uinput.REL_Y, delta_y, syn=True)
+    
+    # Update cached position
+    cached_mouse_position = (
+        max(0, min(cached_mouse_position[0] + delta_x, screen_width - 1)),
+        max(0, min(cached_mouse_position[1] + delta_y, screen_height - 1))
+    )
 
-    mouse.position = (new_x, new_y)
-    # Save caches changes in mouse position
-    cached_mouse_position = (new_x, new_y)
+def press_button(button):
+    device.emit(button, 1)
+
+def release_button(button):
+    device.emit(button, 0)
+
+def scroll_mouse(delta_x, delta_y):
+    if delta_y != 0:
+        device.emit(uinput.REL_WHEEL, delta_y, syn=False)
+    if delta_x != 0:
+        device.emit(uinput.REL_HWHEEL, delta_x, syn=True)
+    device.syn()  # Ensure all events are sent
 
 #
 # Tooltip Code
@@ -431,7 +451,7 @@ screen_height = root.winfo_screenheight()
 root.destroy()
 
 # Move mouse to the center of the screen
-mouse.position = (screen_width / 2, screen_height / 2)
+set_mouse_position(int(screen_width / 2 - cached_mouse_position[0]), int(screen_height / 2 - cached_mouse_position[1]))
 
 # Show message about ready to use (moved after tkinter thread starts)
 def show_initial_message():
@@ -600,12 +620,12 @@ def make_action(action_type):
     action_map = {
         'pressLeft': {
             'tooltip': ('', "#000000", "#00b600"),
-            'mouse_action': lambda: mouse.press(Button.left),
+            'mouse_action': lambda: press_button(uinput.BTN_LEFT),
             'wait': 0
         },
         'releaseLeft': {
             'tooltip': ('hide', '', ''),
-            'mouse_action': lambda: mouse.release(Button.left),
+            'mouse_action': lambda: release_button(uinput.BTN_LEFT),
             # 'wait': int(fpsRealMean / 6)
         },
         'showOptions1': {
@@ -618,19 +638,19 @@ def make_action(action_type):
         },
         'pressRight': {
             'tooltip': ('', "#000000", "#b6b63d"),
-            'mouse_action': lambda: mouse.press(Button.right)
+            'mouse_action': lambda: press_button(uinput.BTN_RIGHT)
         },
         'releaseRight': {
             'tooltip': ('hide', '', ''),
-            'mouse_action': lambda: mouse.release(Button.right),
+            'mouse_action': lambda: release_button(uinput.BTN_RIGHT),
             'wait': int(fpsRealMean / 2)
         },
         'clickLeft': {
-            'mouse_action': lambda: (mouse.press(Button.left), mouse.release(Button.left)),
+            'mouse_action': lambda: (press_button(uinput.BTN_LEFT), release_button(uinput.BTN_LEFT)),
             'wait': int(fpsRealMean / 2)
         },
         'clickRight': {
-            'mouse_action': lambda: (mouse.press(Button.right), mouse.release(Button.right)),
+            'mouse_action': lambda: (press_button(uinput.BTN_RIGHT), release_button(uinput.BTN_RIGHT)),
             'wait': int(fpsRealMean / 2)
         },
         'enableCursor': {
@@ -1062,14 +1082,14 @@ def mediapipe_processing():
                         scrollValueAccumulatedY += mousePointYApply / fpsRealMean
                         scrollValueAccumulatedX += mousePointXApply / fpsRealMean
                         if abs(scrollValueAccumulatedY) >= 1 and abs(scrollValueAccumulatedX) >= 1:
-                            mouse.scroll(int(scrollValueAccumulatedX), int(-scrollValueAccumulatedY))
+                            scroll_mouse(int(scrollValueAccumulatedX), int(-scrollValueAccumulatedY))
                             scrollValueAccumulatedY = 0
                             scrollValueAccumulatedX = 0
                         if abs(scrollValueAccumulatedY) >= 1:
-                            mouse.scroll(0, int(-scrollValueAccumulatedY))
+                            scroll_mouse(0, int(-scrollValueAccumulatedY))
                             scrollValueAccumulatedY = 0
                         if abs(scrollValueAccumulatedX) >= 1:
-                            mouse.scroll(int(scrollValueAccumulatedX), 0)
+                            scroll_mouse(int(scrollValueAccumulatedX), 0)
                             scrollValueAccumulatedX = 0
                             
                     elif current_action == 'showOptions1':
