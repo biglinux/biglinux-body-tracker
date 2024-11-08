@@ -61,8 +61,8 @@ sudo apt install tk
 
 ### Compatibility
 
-- Works on **Xorg** for all desktop environments.
-- For **Wayland**, it is supported only on **KDE Plasma**, and it is necessary to install `kdotool` from [kdotool GitHub repository](https://github.com/jinliu/kdotool).
+- Works on **Xorg** for all desktop environments, with better quality installing **xinput** and **xdotool**.
+- For **Wayland**, improve quality on **KDE Plasma**, installing `kdotool` from [kdotool GitHub repository](https://github.com/jinliu/kdotool).
 
 ## Usage
 

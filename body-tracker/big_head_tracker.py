@@ -3,6 +3,7 @@ import threading
 import time
 import os
 import sys
+import glob
 from screeninfo import get_monitors
 import argparse
 import configparser
@@ -11,7 +12,8 @@ import numpy as np
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image
-import uinput  # Added import for uinput
+import evdev
+from evdev import UInput, ecodes, AbsInfo
 
 # Used to find files after use pyinstaller
 def resource_path(relative_path):
@@ -218,32 +220,38 @@ scrollValueAccumulatedX = 0
 last_mouse_update_time = 0
 number_monitors = 1
 
-#
-# Initialize uinput device
-#
-device = uinput.Device([
-    uinput.REL_X,
-    uinput.REL_Y,
-    uinput.REL_WHEEL,      # For vertical scrolling
-    uinput.REL_HWHEEL,     # For horizontal scrolling
-    uinput.BTN_LEFT,
-    uinput.BTN_RIGHT,
-    uinput.BTN_MIDDLE,
-])
-
 # Detect Wayland
 if os.getenv('XDG_SESSION_TYPE') == 'wayland':
     graphics_system = 'wayland'
-elif os.getenv('XDG_SESSION_DESKTOP') == 'KDE':
-    graphics_system = 'waylandKDE'
+    if os.getenv('XDG_SESSION_DESKTOP') == 'KDE':
+        graphics_system = 'waylandKDE'
+    elif os.getenv('XDG_SESSION_DESKTOP') == 'gnome':
+        graphics_system = 'waylandGNOME'    
 else:
-    graphics_system = 'x11'    
+    graphics_system = 'x11'  
+
+
+#
+# Initialize uinput device with acceleration
+mouse = UInput({
+    evdev.ecodes.EV_REL: [
+        (evdev.ecodes.REL_X, AbsInfo(value=0, min=-32768, max=32767, fuzz=0, flat=0, resolution=0)), 
+        (evdev.ecodes.REL_Y, AbsInfo(value=0, min=-32768, max=32767, fuzz=0, flat=0, resolution=0)),
+        evdev.ecodes.REL_WHEEL,
+        evdev.ecodes.REL_HWHEEL,
+    ],
+    evdev.ecodes.EV_KEY: [
+        evdev.ecodes.BTN_LEFT,
+        evdev.ecodes.BTN_RIGHT,
+        evdev.ecodes.BTN_MIDDLE,
+    ]
+}, name='virtual-mouse')
 
 def get_screen_scale():
     if graphics_system == 'waylandKDE':
         try:
             # Get scale from KDE KWin
-            result = subprocess.run('qdbus org.kde.KWin /KWin org.kde.KWin.supportInformation | grep -m1 "^Scale:" | awk "{print \$2}"', capture_output=True, shell=True, text=True)
+            result = subprocess.run('qdbus org.kde.KWin /KWin org.kde.KWin.supportInformation | grep -m1 "^Scale:" | awk \'{print $2}\'', capture_output=True, shell=True, text=True)
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
         except Exception as e:
@@ -299,62 +307,82 @@ def get_mouse_position():
         new_screen_width, new_screen_height = get_screen_size()
         if new_screen_width != screen_width or new_screen_height != screen_height:
             screen_width, screen_height = new_screen_width, new_screen_height
-            cached_mouse_position = (screen_width / 2, screen_height / 2)
-            # Move the mouse to the center of the screen
-            set_mouse_position(int(screen_width / 2 - cached_mouse_position[0]), int(screen_height / 2 - cached_mouse_position[1]))
+
+            # Move mouse to the center of the screen
+            set_mouse_position(int(-screen_width), int(-screen_height))
+            set_mouse_position(int(screen_width / 4), int(screen_height / 4))
+            
+            cached_mouse_position = (int(screen_width / 2), int(screen_height / 2))
 
     if graphics_system == 'waylandKDE':
-        # Check for multiple screens
-        if globals()['number_monitors'] == 1:
-            return cached_mouse_position  # Return cached position if not enough monitors
+        global mouse_position_call_counter
+        if 'mouse_position_call_counter' not in globals():
+            mouse_position_call_counter = 0
+
+        mouse_position_call_counter += 1
+        if mouse_position_call_counter >= 5:
+            mouse_position_call_counter = 0
+            try:
+                result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
+                output = result.stdout
+                position = {}
+
+                for line in output.splitlines():
+                    if line.startswith("X="):
+                        position['X'] = int(line.split('=')[1].strip())
+                    elif line.startswith("Y="):
+                        position['Y'] = int(line.split('=')[1].strip())
+
+                if 'X' in position and 'Y' in position:
+                    last_known_x, last_known_y = position['X'], position['Y']
+                cached_mouse_position = (last_known_x, last_known_y)
+            except Exception as e:
+                print(f"Error obtaining mouse position with kdotool: {e}")
+    elif graphics_system == 'x11':
         try:
-            result = subprocess.run(["kdotool", "getmouselocation", "--shell"], capture_output=True, text=True)
-            output = result.stdout
-            position = {}
-
-            for line in output.splitlines():
-                if line.startswith("X="):
-                    position['X'] = int(line.split('=')[1].strip())
-                elif line.startswith("Y="):
-                    position['Y'] = int(line.split('=')[1].strip())
-
-            if 'X' in position and 'Y' in position:
-                last_known_x, last_known_y = position['X'], position['Y']
+            result = subprocess.run(['xdotool', 'getmouselocation'], capture_output=True, text=True)
+            output = result.stdout.strip()
+            x = int(output.split()[0].split(':')[1])
+            y = int(output.split()[1].split(':')[1])
+            last_known_x, last_known_y = x, y
             cached_mouse_position = (last_known_x, last_known_y)
         except Exception as e:
-            print(f"Error obtaining mouse position with kdotool: {e}")
-    elif graphics_system == 'x11':
-        # In Xorg use simple way
-        # Since uinput handles relative movements, getting absolute position isn't straightforward
-        # Here we just return the cached position
-        pass
+            print(f"Error getting mouse position with pynput: {e}")
     
     return cached_mouse_position
 
 def set_mouse_position(delta_x, delta_y):
-    global last_known_x, last_known_y, cached_mouse_position
-    # Emit relative movement events
-    device.emit(uinput.REL_X, delta_x, syn=False)
-    device.emit(uinput.REL_Y, delta_y, syn=True)
+    global cached_mouse_position
+    
+    delta_x = int(delta_x)
+    delta_y = int(delta_y)
+    
+    # Write relative movement events
+    mouse.write(ecodes.EV_REL, ecodes.REL_X, delta_x)
+    mouse.write(ecodes.EV_REL, ecodes.REL_Y, delta_y)
     
     # Update cached position
     cached_mouse_position = (
-        max(0, min(cached_mouse_position[0] + delta_x, screen_width - 1)),
-        max(0, min(cached_mouse_position[1] + delta_y, screen_height - 1))
+        max(-100, min(cached_mouse_position[0] + delta_x, screen_width + 100)),
+        max(-60, min(cached_mouse_position[1] + delta_y, screen_height + 60))
     )
+    mouse.syn()
+
 
 def press_button(button):
-    device.emit(button, 1)
+    mouse.write(ecodes.EV_KEY, button, 1)
+    mouse.syn()
 
 def release_button(button):
-    device.emit(button, 0)
+    mouse.write(ecodes.EV_KEY, button, 0)
+    mouse.syn()
 
 def scroll_mouse(delta_x, delta_y):
     if delta_y != 0:
-        device.emit(uinput.REL_WHEEL, delta_y, syn=False)
+        mouse.write(ecodes.EV_REL, ecodes.REL_WHEEL, delta_y)
     if delta_x != 0:
-        device.emit(uinput.REL_HWHEEL, delta_x, syn=True)
-    device.syn()  # Ensure all events are sent
+        mouse.write(ecodes.EV_REL, ecodes.REL_HWHEEL, delta_x)
+    mouse.syn()  # Ensure all events are sent
 
 #
 # Tooltip Code
@@ -451,7 +479,10 @@ screen_height = root.winfo_screenheight()
 root.destroy()
 
 # Move mouse to the center of the screen
-set_mouse_position(int(screen_width / 2 - cached_mouse_position[0]), int(screen_height / 2 - cached_mouse_position[1]))
+set_mouse_position(int(-screen_width), int(-screen_height))
+set_mouse_position(int(screen_width / 4), int(screen_height / 4))
+
+cached_mouse_position = (int(screen_width / 2), int(screen_height / 2))
 
 # Show message about ready to use (moved after tkinter thread starts)
 def show_initial_message():
@@ -591,8 +622,28 @@ class WebcamSource(VideoSource):
     def __init__(self, camera_id=0, width=1024, height=768, fps=30, autofocus=0, 
                  absolute_focus=75, flip=True, display=False):
         super().__init__(flip, display)
-        self._capture = cv2.VideoCapture(camera_id, cv2.CAP_V4L2)
         
+        # Get list of available video devices
+        video_devices = [f"/dev/video{i}" for i in glob.glob("/dev/video*")]
+        
+        if not video_devices:
+            print("No video devices found!")
+            sys.exit(1)
+            
+        # Sort devices by number to try them in order
+        video_devices.sort(key=lambda x: int(x.replace("/dev/video", "")))
+        
+        # Try each available camera
+        for device in video_devices:
+            device_id = int(device.replace("/dev/video", ""))
+            self._capture = cv2.VideoCapture(device_id, cv2.CAP_V4L2)
+            if self._capture.isOpened():
+                print(f"Successfully opened camera ID: {device_id}")
+                break
+        else:
+            print("No working camera found!")
+            sys.exit(1)
+            
         # Set camera properties in a single block
         props = {
             cv2.CAP_PROP_FRAME_WIDTH: width,
@@ -620,12 +671,12 @@ def make_action(action_type):
     action_map = {
         'pressLeft': {
             'tooltip': ('', "#000000", "#00b600"),
-            'mouse_action': lambda: press_button(uinput.BTN_LEFT),
+            'mouse_action': lambda: press_button(ecodes.BTN_LEFT),
             'wait': 0
         },
         'releaseLeft': {
             'tooltip': ('hide', '', ''),
-            'mouse_action': lambda: release_button(uinput.BTN_LEFT),
+            'mouse_action': lambda: release_button(ecodes.BTN_LEFT),
             # 'wait': int(fpsRealMean / 6)
         },
         'showOptions1': {
@@ -638,19 +689,19 @@ def make_action(action_type):
         },
         'pressRight': {
             'tooltip': ('', "#000000", "#b6b63d"),
-            'mouse_action': lambda: press_button(uinput.BTN_RIGHT)
+            'mouse_action': lambda: press_button(ecodes.BTN_RIGHT)
         },
         'releaseRight': {
             'tooltip': ('hide', '', ''),
-            'mouse_action': lambda: release_button(uinput.BTN_RIGHT),
+            'mouse_action': lambda: release_button(ecodes.BTN_RIGHT),
             'wait': int(fpsRealMean / 2)
         },
         'clickLeft': {
-            'mouse_action': lambda: (press_button(uinput.BTN_LEFT), release_button(uinput.BTN_LEFT)),
+            'mouse_action': lambda: (press_button(ecodes.BTN_LEFT), release_button(ecodes.BTN_LEFT)),
             'wait': int(fpsRealMean / 2)
         },
         'clickRight': {
-            'mouse_action': lambda: (press_button(uinput.BTN_RIGHT), release_button(uinput.BTN_RIGHT)),
+            'mouse_action': lambda: (press_button(ecodes.BTN_RIGHT), release_button(ecodes.BTN_RIGHT)),
             'wait': int(fpsRealMean / 2)
         },
         'enableCursor': {
@@ -934,8 +985,6 @@ def mediapipe_processing():
                         mouseMoveY = np.linalg.norm(landmarks[6][1] - landmarks[6][2]) * args.mouseSpeedY * 10
 
                         if zeroPointX2 is None:
-                            zeroPointX = mouseMoveX
-                            zeroPointY = mouseMoveY
                             zeroPointX2 = mouseMoveX
                             zeroPointY2 = mouseMoveY
                             mousePointXabs = 0
@@ -944,8 +993,8 @@ def mediapipe_processing():
                         mousePointX = mouseMoveX - zeroPointX2
                         mousePointY = mouseMoveY - zeroPointY2
 
-                        mousePointXabsOld = mousePointXabs
-                        mousePointYabsOld = mousePointYabs
+                        # mousePointXabsOld = mousePointXabs
+                        # mousePointYabsOld = mousePointYabs
                         mousePointXabs = abs(mousePointX)
                         mousePointYabs = abs(mousePointY)
 
@@ -965,11 +1014,13 @@ def mediapipe_processing():
                                 set_mouse_position(int(mousePointXApply), int(mousePointYApply))
 
                                 mouse_position = get_mouse_position()
-                                if mousePositionFrameX == mouse_position[0] and mousePointXabs > 1:
+                                if mousePositionFrameX == mouse_position[0]:
                                     zeroPointX2 -= (zeroPointX2 - mouseMoveX) * 0.1
 
-                                if mousePositionFrameY == mouse_position[1] and mousePointYabs > 1:
+                                if mousePositionFrameY == mouse_position[1]:
                                     zeroPointY2 -= (zeroPointY2 - mouseMoveY) * 0.1
+
+                                print('mouse position ', mouse_position)
 
                                 mousePositionFrameX, mousePositionFrameY = mouse_position
 
@@ -1020,6 +1071,7 @@ def mediapipe_processing():
 
                                 if mousePositionFrameY == mouse_position[1] and mousePointYabs > 1:
                                     zeroPointY2 -= (zeroPointY2 - mouseMoveY) * 0.1
+                                    
 
                                 mousePositionFrameX, mousePositionFrameY = mouse_position
 
@@ -1284,6 +1336,36 @@ mediapipe_thread.start()
 
 # Show ready message
 show_tooltip('Ready', "#000000", "#00b600", 'center', screen_height / 2)
+
+#
+# Configure virtual-mouse acceleration
+#
+if graphics_system == 'waylandKDE':
+    try:
+        # Find the event device for virtual-mouse
+        event_devices = glob.glob('/sys/class/input/event*/device/name')
+        event_device = None
+        
+        for device in event_devices:
+            with open(device, 'r') as f:
+                if 'virtual-mouse' in f.read():
+                    event_device = device.split('/')[4].replace('event', '')
+                    break
+        if event_device:
+            # Set pointer acceleration using qdbus
+            subprocess.run(['qdbus', 'org.kde.KWin', f'/org/kde/KWin/InputDevice/event{event_device}', 
+                          'org.kde.KWin.InputDevice.pointerAccelerationProfileFlat', '1'])
+            subprocess.run(['qdbus', 'org.kde.KWin', f'/org/kde/KWin/InputDevice/event{event_device}', 
+                          'org.kde.KWin.InputDevice.pointerAcceleration', '0'])
+    except Exception as e:
+        print(f"Failed to set mouse acceleration properties: {e}")
+elif graphics_system == 'waylandGNOME':
+    subprocess.run(['gsettings', 'set', 'org.gnome.desktop.peripherals.mouse', 'accel-profile', '\'flat\''])
+
+elif graphics_system == 'x11':
+    # Attempt to configure acceleration on X11
+    subprocess.run(['xinput', 'set-prop', 'virtual-mouse', 'libinput Accel Speed', '0'])
+    subprocess.run(['xinput', 'set-prop', 'virtual-mouse', 'libinput Accel Profile Enabled', '1, 0'])
 
 # Start event loop
 sys.exit(app_qt.exec())

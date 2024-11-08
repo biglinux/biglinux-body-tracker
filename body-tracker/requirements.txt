@@ -6,3 +6,4 @@ pynput
 pyqt6
 screeninfo
 python-uinput
+glob
